@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+    hse-app-db:
+        image: postgres:13.4-alpine
+        restart: always
+        volumes:
+          - pg-data:/var/lib/postgresql/data
+        container_name: hse-app-db
+        environment:
+          POSTGRES_USER: 'authusr'
+          POSTGRES_PASSWORD: 'auth123'
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: 'hse-app'
+          WAIT_FOR_DB: 'true'
+        ports:
+          - 5432:5432
+        networks:
+          - app-net
+
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: hse-app
+        environment:
+          - NODE_ENV=${ENV:-development}
+        depends_on:
+           - "hse-app-db"
+            # condition: service_healthy
+        ports:
+          - '3000:${SERVER_PORT:-3000}'
+        networks:
+          - app-net
+
+networks:
+    app-net:
+        name: app-net
+
+volumes:
+    pg-data:
+      #driver: local
