@@ -7,8 +7,9 @@
 4. Restart your PC
 
 ## Installation
-1. Run `docker-compose up --force-recreate --build`
-2. Done!
+1. Create **.env** file based on **.env.dist** and change needed variables `cp .env.dist .env`
+2. Run `docker-compose up --force-recreate --build`
+3. Done!
 
 ## Example requests
 ### Частотный анализ текста:
