@@ -43,7 +43,7 @@ async function startSending() {
         `Боту плохо, пользователей активно: ${usersActive}`
       );
     }
-  }, 60000);
+  }, 30000);
 }
 startSending();
 
@@ -86,12 +86,12 @@ function askCurrency(currency, chatId, bounds) {
             user.lastRequest = new Date();
             await user.save();
           })
-          .catch();
+          .catch((ex) => console.log(ex));
       } else {
         // Не нашли валюту
       }
     })
-    .catch((ex) => console.log(ex.message));
+    .catch((ex) => console.log(ex));
 }
 
 // Служебные команды
