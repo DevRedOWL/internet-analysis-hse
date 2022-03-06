@@ -7,8 +7,8 @@ const sequelize = new Sequelize(
   { logging: false }
 );
 
-class SantaUser extends Model {}
-SantaUser.init(
+class TinkoffUser extends Model {}
+TinkoffUser.init(
   {
     id: {
       primaryKey: true,
@@ -16,14 +16,22 @@ SantaUser.init(
       allowNull: false,
       type: DataTypes.INTEGER,
     },
-    userid: DataTypes.INTEGER,
-    phone: DataTypes.STRING,
-    partner: {
-      type: DataTypes.INTEGER,
-      defaultValue: -1,
+    userId: DataTypes.INTEGER,
+    currency: DataTypes.STRING,
+    bounds: {
+      type: DataTypes.JSONB,
+      defaultValue: null,
+    },
+    lastRequest: {
+      type: DataTypes.DATE,
+      defaultValue: new Date(),
+    },
+    enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     },
   },
-  { sequelize, modelName: "santa_user" }
+  { sequelize, modelName: "tinkoff_user" }
 );
 
 (async () => {
@@ -33,5 +41,5 @@ SantaUser.init(
 module.exports = {
   Op,
   sequelize,
-  SantaUser,
+  TinkoffUser,
 };

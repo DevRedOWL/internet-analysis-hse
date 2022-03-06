@@ -1,17 +1,17 @@
 version: '3.8'
 
 services:
-    hse-app-db:
+    tinkoff-app-db:
         image: postgres:13.4-alpine
         restart: always
         volumes:
           - pg-data:/var/lib/postgresql/data
-        container_name: hse-app-db
+        container_name: tinkoff-app-db
         environment:
-          POSTGRES_USER: 'authusr'
-          POSTGRES_PASSWORD: 'auth123'
+          POSTGRES_USER: authusr
+          POSTGRES_PASSWORD: auth123
           POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_DB: 'hse-app'
+          POSTGRES_DB: tinkoff-app
           WAIT_FOR_DB: 'true'
         ports:
           - 5432:5432
@@ -26,7 +26,7 @@ services:
         environment:
           - NODE_ENV=${ENV:-development}
         depends_on:
-           - "hse-app-db"
+           - "tinkoff-app-db"
             # condition: service_healthy
         ports:
           - '3000:${SERVER_PORT:-3000}'
