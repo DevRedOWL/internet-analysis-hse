@@ -22,14 +22,14 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        container_name: hse-app
+        container_name: tinkoff-app
         environment:
           - NODE_ENV=${ENV:-development}
         depends_on:
            - "tinkoff-app-db"
             # condition: service_healthy
         ports:
-          - '3000:${SERVER_PORT:-3000}'
+          - '1488:${SERVER_PORT:-1488}'
         networks:
           - app-net
 

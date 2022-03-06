@@ -43,7 +43,7 @@ async function startSending() {
         `Боту плохо, пользователей активно: ${usersActive}`
       );
     }
-  }, 10000);
+  }, 600000);
 }
 startSending();
 
