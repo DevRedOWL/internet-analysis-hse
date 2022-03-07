@@ -226,7 +226,8 @@ bot.command("users", async (ctx) => {
         )}`
       );
     }, "*Список пользователей:*\n```") + "```";
-  ctx.replyWithMarkdown(result);
+  console.log(result);
+  ctx.reply("Check console");
 });
 
 // Обработка любого сообщения
