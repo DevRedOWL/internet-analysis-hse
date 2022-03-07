@@ -1,5 +1,6 @@
 const { Scenes, Markup } = require("telegraf");
 const { TinkoffUser, Op } = require("./db");
+const config = require("./config");
 
 function calculateBounds(center, scaleDenominator) {
   const quantifier = 2.2; // 2.2
@@ -89,8 +90,8 @@ P.S. Если вы находитесь в Москве, пожалуйста, �
   SendingScene() {
     const sending = new Scenes.BaseScene("sending");
     sending.enter((ctx) => {
-      if (ctx.from.id != 236413395) {
-        ctx.reply(`У вас недостаточно прав для совершения данного действия`);
+      if (ctx.from.id != config.admin.id) {
+        ctx.reply(config.admin.error_message);
         ctx.scene.leave();
       }
       ctx.reply(`Введите сообщение для рассылки или /exit для выхода`);

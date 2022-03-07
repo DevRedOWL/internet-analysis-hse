@@ -2,6 +2,7 @@ const { Telegraf, Extra, Markup, Scenes, session } = require("telegraf");
 const SceneGenerator = require("./telegramScenes");
 const { TinkoffUser, Op } = require("./db");
 const axios = require("axios");
+const config = require("./config");
 
 // Настройка бота
 const bot = new Telegraf(process.env.TELEGRAM_API_KEY);
@@ -21,10 +22,10 @@ const currencyCodes = {
 
 async function startSending() {
   let usersActive = 0;
-  const limit = new Date(Date.now() - 5 * 60000);
 
   setInterval(async () => {
     try {
+      const limit = new Date(Date.now() - 5 * 60000);
       const found = await TinkoffUser.findAll({
         where: {
           enabled: true,
@@ -45,7 +46,7 @@ async function startSending() {
     } catch (ex) {
       console.log("Рассылка moment");
       bot.telegram.sendMessage(
-        236413395,
+        config.admin.id,
         `Боту плохо, пользователей активно: ${usersActive}`
       );
     }
@@ -189,6 +190,28 @@ bot.command("sending", async (ctx) => {
 });
 bot.command("exit", async (ctx) => {
   ctx.reply("Вы вышли в главное меню");
+});
+
+// Админ
+bot.command("users", async (ctx) => {
+  if (ctx.from.id != config.admin.id) {
+    return ctx.reply(config.admin.error_message);
+  }
+
+  const users = await TinkoffUser.findAll({});
+  const result =
+    users.reduce((acc, user) => {
+      const { userId, bounds, currency, enabled, lastRequest } =
+        user.dataValues;
+      return (
+        acc +
+        "\n\n" +
+        `id: ${userId} | currency: ${currency} | enabled: ${enabled} \nlastRequest: ${lastRequest.toISOString()} \nbounds: ${JSON.stringify(
+          bounds
+        )}`
+      );
+    }, "*Список пользователей:*\n```") + "```";
+  ctx.replyWithMarkdown(result);
 });
 
 // Обработка любого сообщения

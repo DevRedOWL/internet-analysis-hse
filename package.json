@@ -7,7 +7,8 @@
   "scripts": {
     "start:watch": "nodemon -e js",
     "start": "node index.js",
-    "db:recreate": "./node_modules/.bin/sequelize db:drop && ./node_modules/.bin/sequelize db:create"
+    "db:recreate": "./node_modules/.bin/sequelize db:drop && ./node_modules/.bin/sequelize db:create",
+    "up": "docker-compose down && docker-compose up --force-recreate --build -d"
   },
   "dependencies": {
     "apos-to-lex-form": "^1.0.5",
