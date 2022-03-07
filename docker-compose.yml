@@ -14,7 +14,7 @@ services:
           POSTGRES_DB: tinkoff-app
           WAIT_FOR_DB: 'true'
         ports:
-          - 5432:5432
+          - 5439:5432
         networks:
           - app-net
 
