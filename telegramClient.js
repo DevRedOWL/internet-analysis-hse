@@ -40,7 +40,12 @@ async function startSending() {
       usersActive = found.length;
       for (let user of found) {
         const { currency, userId, bounds } = user.dataValues;
-        askCurrency(currency, userId, bounds);
+        const awaiter = new Promise((resolve) => {
+          askCurrency(currency, userId, bounds);
+          setTimeout(resolve(true), 350);
+        });
+        console.log(`Loading ATM for ${userId}...`);
+        await awaiter;
       }
       console.log(`Sending to ${usersActive} people`);
     } catch (ex) {
@@ -114,7 +119,7 @@ https://www.google.com/maps/@${i.location.lat},${i.location.lng},14z?hl=RU`;
         // Не нашли валюту
       }
     })
-    .catch((ex) => console.log(ex));
+    .catch((ex) => console.log(ex.message));
 }
 
 // Служебные команды
