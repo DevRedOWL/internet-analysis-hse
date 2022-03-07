@@ -80,10 +80,25 @@ function askCurrency(currency, chatId, bounds) {
 Сумма: ${amount}${currencyCodes[currency]}
 https://www.google.com/maps/@${i.location.lat},${i.location.lng},14z?hl=RU`;
           });
-        bot.telegram.sendMessage(
-          chatId,
-          result.reduce((acc, cur) => acc + "\n\n" + cur, "")
-        );
+        bot.telegram
+          .sendMessage(
+            chatId,
+            result.reduce((acc, cur) => acc + "\n\n" + cur, "")
+          )
+          .catch((ex) => {
+            TinkoffUser.findOne({
+              where: {
+                userId: chatId,
+              },
+            })
+              .then(async (user) => {
+                user.enabled = false;
+                await user.save();
+                console.log(`Blocked user disabled ${chatId}`);
+              })
+              .catch();
+          });
+
         // Update usage
         TinkoffUser.findOne({
           where: {

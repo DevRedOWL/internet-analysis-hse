@@ -106,7 +106,11 @@ P.S. Если вы находитесь в Москве, пожалуйста, �
       try {
         const users = await TinkoffUser.findAll();
         for (let user of users) {
-          ctx.telegram.sendMessage(user.getDataValue("userId"), msg);
+          try {
+            await ctx.telegram.sendMessage(user.getDataValue("userId"), msg);
+          } catch (ex) {
+            console.log(`Blocked user ${user.getDataValue("userId")}`)
+          }
         }
         ctx.replyWithMarkdown(
           `*Сообщение успешно отправлено ${users.length} пользователям:*\n\n${msg}`
