@@ -42,7 +42,7 @@ async function startSending() {
         const { currency, userId, bounds } = user.dataValues;
         const awaiter = new Promise((resolve) => {
           askCurrency(currency, userId, bounds);
-          setTimeout(resolve(true), 350);
+          setTimeout(() => resolve(true), 400);
         });
         console.log(`Loading ATM for ${userId}...`);
         await awaiter;
@@ -55,7 +55,7 @@ async function startSending() {
         `Боту плохо, пользователей активно: ${usersActive}`
       );
     }
-  }, 30000);
+  }, 45000);
 }
 startSending();
 
