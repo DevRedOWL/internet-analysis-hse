@@ -70,14 +70,15 @@ function askCurrency(currency, chatId, bounds) {
         const result = clusters
           .map((cluster) => cluster.points)
           .reduce((acc, cur) => [...acc, ...cur], [])
-          .map(
-            (i) =>
-              `Адрес: ${i.address}\nСумма: ${
-                i.limits.filter((limit) => limit.currency === "EUR")[0].amount
-              }${currencyCodes[currency]} \nhttps://www.google.com/maps/@${
-                i.location.lat
-              },${i.location.lng},14z?hl=RU`
-          );
+          .map((i) => {
+            const amount = i.limits.filter(
+              (limit) => limit.currency === currency
+            )[0].amount;
+            return `
+Адрес: ${i.address}
+Сумма: ${amount}${currencyCodes[currency]}
+https://www.google.com/maps/@${i.location.lat},${i.location.lng},14z?hl=RU`;
+          });
         bot.telegram.sendMessage(
           chatId,
           result.reduce((acc, cur) => acc + "\n\n" + cur, "")

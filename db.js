@@ -24,7 +24,7 @@ TinkoffUser.init(
     },
     lastRequest: {
       type: DataTypes.DATE,
-      defaultValue: new Date(),
+      defaultValue: new Date(Date.now() - 5 * 60000),
     },
     enabled: {
       type: DataTypes.BOOLEAN,
