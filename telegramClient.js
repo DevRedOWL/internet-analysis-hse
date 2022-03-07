@@ -10,8 +10,14 @@ bot.use(session());
 
 // Работа со сценами
 const tinkoffScene = new SceneGenerator().TinkoffScene();
-const stage = new Scenes.Stage([tinkoffScene]);
+const sendingScene = new SceneGenerator().SendingScene();
+const stage = new Scenes.Stage([tinkoffScene, sendingScene]);
 bot.use(stage.middleware());
+
+const currencyCodes = {
+  EUR: "€",
+  USD: "$",
+};
 
 async function startSending() {
   let usersActive = 0;
@@ -68,9 +74,9 @@ function askCurrency(currency, chatId, bounds) {
             (i) =>
               `Адрес: ${i.address}\nСумма: ${
                 i.limits.filter((limit) => limit.currency === "EUR")[0].amount
-              }\nhttps://www.google.com/maps/@${i.location.lat},${
-                i.location.lng
-              },14z?hl=RU`
+              }${currencyCodes[currency]} \nhttps://www.google.com/maps/@${
+                i.location.lat
+              },${i.location.lng},14z?hl=RU`
           );
         bot.telegram.sendMessage(
           chatId,
@@ -97,10 +103,12 @@ function askCurrency(currency, chatId, bounds) {
 // Служебные команды
 bot.start((ctx) => {
   ctx.telegram.setMyCommands([
-    { command: "/map", description: "Выбор города" },
+    { command: "map", description: "Выбор города" },
     { command: "usd", description: "Доллар" },
     { command: "eur", description: "Евро" },
     { command: "stop", description: "Прекратить рассылку" },
+    { command: "status", description: "Просмотр текущих параметров" },
+    { command: "exit", description: "Выход из режима настройки" },
     { command: "start", description: "Получить эту инструкцию еще раз" },
   ]);
   ctx.reply(
@@ -123,7 +131,7 @@ bot.start((ctx) => {
 });
 bot.help((ctx) => ctx.reply("Введите /start для отображения меню"));
 
-// Обработка команд
+// Настройка валюты
 bot.command("usd", async (ctx) => {
   const [user] = await TinkoffUser.findOrCreate({
     where: {
@@ -146,6 +154,7 @@ bot.command("eur", async (ctx) => {
   await user.save();
   return ctx.reply("Валюта EUR установлена");
 });
+// Настройка рассылки
 bot.command("stop", async (ctx) => {
   const [user] = await TinkoffUser.findOrCreate({
     where: {
@@ -156,8 +165,29 @@ bot.command("stop", async (ctx) => {
   await user.save();
   return ctx.reply("Рассылка прекращена");
 });
+bot.command("status", async (ctx) => {
+  const [user] = await TinkoffUser.findOrCreate({
+    where: {
+      userId: ctx.from.id,
+    },
+  });
+  const { currency, enabled, bounds } = user.dataValues;
+  ctx.replyWithMarkdown(`Текущие настройки:\n
+Рассылка: *${enabled === true ? "Включена" : "Отключена"}*
+Валюта: *${currency ? currencyCodes[currency] : "Необходимо настроить"}*
+Город: *${bounds != null ? "Настроен" : "Необходимо настроить"}*
+`);
+});
+
+// Работа со сценами
 bot.command("map", async (ctx) => {
   ctx.scene.enter("map");
+});
+bot.command("sending", async (ctx) => {
+  ctx.scene.enter("sending");
+});
+bot.command("exit", async (ctx) => {
+  ctx.reply("Вы вышли в главное меню");
 });
 
 // Обработка любого сообщения

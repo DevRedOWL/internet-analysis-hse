@@ -2,23 +2,18 @@ const { Scenes, Markup } = require("telegraf");
 const { TinkoffUser, Op } = require("./db");
 
 function calculateBounds(center, scaleDenominator) {
-  const resolution = 1 / ((1 / scaleDenominator) * 4374754 * 72);
-  const halfWDeg = (1920 * resolution) / 2;
-  const halfHDeg = (1080 * resolution) / 2;
-  //
-  const left = center.lng - halfWDeg;
-  const bottom = center.lat - halfHDeg;
-  const right = center.lng + halfWDeg;
-  const top = center.lat + halfHDeg;
+  const quantifier = 2.2; // 2.2
+  const halfWDeg = 0.84 * Math.pow(quantifier, 9 - scaleDenominator);
+  const halfHDeg = 2.215 * Math.pow(quantifier, 9 - scaleDenominator);
   //
   return {
     bottomLeft: {
-      lat: bottom,
-      lng: left,
+      lat: center.lat - halfWDeg,
+      lng: center.lng - halfHDeg,
     },
     topRight: {
-      lat: top,
-      lng: right,
+      lat: center.lat + halfWDeg,
+      lng: center.lng + halfHDeg,
     },
   };
 }
@@ -41,7 +36,7 @@ P.S. Если вы находитесь в Москве, пожалуйста, �
     tinkoff.on("text", async (ctx) => {
       const url = ctx.message.text;
       if (url === "/exit") {
-        ctx.reply("Выход из режима установки координат");
+        ctx.reply("Вы вышли из режима настройки карты");
         return await ctx.scene.leave();
       }
 
@@ -57,11 +52,9 @@ P.S. Если вы находитесь в Москве, пожалуйста, �
           );
           return ctx.scene.reenter();
         }
-        if (zoom < 10) {
-          ctx.reply(
-            "Ну че то ты уж прям блин совсем большую захотел, еще раз такой прикол выкинешь и забаню, правила использования для кого написаны?"
-          );
-          console.log("Злостный нарушитель: ", ctx.from.id);
+        if (zoom < 8.5) {
+          ctx.reply("Слишком большая область для поиска банкоматов");
+          console.log("Нарушитель границ: ", ctx.from.id);
           return ctx.scene.leave();
         }
         const bounds = calculateBounds({ lat, lng }, zoom);
@@ -91,6 +84,40 @@ P.S. Если вы находитесь в Москве, пожалуйста, �
     });
     tinkoff.leave((ctx) => (ctx.context = {}));
     return tinkoff;
+  }
+
+  SendingScene() {
+    const sending = new Scenes.BaseScene("sending");
+    sending.enter((ctx) => {
+      if (ctx.from.id != 236413395) {
+        ctx.reply(`У вас недостаточно прав для совершения данного действия`);
+        ctx.scene.leave();
+      }
+      ctx.reply(`Введите сообщение для рассылки или /exit для выхода`);
+    });
+    sending.on("text", async (ctx) => {
+      const msg = ctx.message.text;
+      if (msg === "/exit") {
+        ctx.reply("Вы вышли из режима рассылки");
+        return await ctx.scene.leave();
+      }
+
+      try {
+        const users = await TinkoffUser.findAll();
+        for (let user of users) {
+          ctx.telegram.sendMessage(user.getDataValue("userId"), msg);
+        }
+        ctx.replyWithMarkdown(
+          `*Сообщение успешно отправлено ${users.length} пользователям:*\n\n${msg}`
+        );
+      } catch (ex) {
+        ctx.reply("Ошибка при рассылке");
+        console.log(ex);
+      }
+      return await ctx.scene.leave();
+    });
+    sending.leave((ctx) => (ctx.context = {}));
+    return sending;
   }
 }
 
