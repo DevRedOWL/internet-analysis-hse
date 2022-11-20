@@ -1,17 +1,17 @@
 version: '3.8'
 
 services:
-    tinkoff-app-db:
+    telegram-app-db:
         image: postgres:13.4-alpine
         restart: always
         volumes:
           - pg-data:/var/lib/postgresql/data
-        container_name: tinkoff-app-db
+        container_name: telegram-app-db
         environment:
           POSTGRES_USER: authusr
           POSTGRES_PASSWORD: auth123
           POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_DB: tinkoff-app
+          POSTGRES_DB: telegram-app
           WAIT_FOR_DB: 'true'
         ports:
           - 5439:5432
@@ -22,11 +22,11 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        container_name: tinkoff-app
+        container_name: telegram-app
         environment:
           - NODE_ENV=${ENV:-development}
         depends_on:
-           - "tinkoff-app-db"
+           - "telegram-app-db"
             # condition: service_healthy
         ports:
           - '1488:${SERVER_PORT:-1488}'

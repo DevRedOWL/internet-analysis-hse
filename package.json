@@ -4,26 +4,32 @@
   "author": "Daniel Varentsoff",
   "main": "index.js",
   "license": "WTFPL",
+  "type": "module",
   "scripts": {
     "start:watch": "nodemon -e js",
     "start": "node index.js",
-    "db:recreate": "./node_modules/.bin/sequelize db:drop && ./node_modules/.bin/sequelize db:create",
+    "db:drop": "./node_modules/.bin/sequelize db:drop",
+    "db:recreate": "yarn db:drop && ./node_modules/.bin/sequelize db:create",
     "up": "docker-compose down && docker-compose up --force-recreate --build -d"
   },
   "dependencies": {
     "apos-to-lex-form": "^1.0.5",
     "axios": "^0.26.0",
+    "cli-table": "^0.3.11",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.17.2",
     "jsdom": "^19.0.0",
+    "markdown-table": "^3.0.2",
     "natural": "^5.1.11",
     "node-telegram-bot-api": "^0.56.0",
     "pg": "^8.7.1",
     "sequelize": "^6.17.0",
     "spelling-corrector": "^3.0.0",
     "stopword": "^1.0.11",
+    "table": "^6.8.1",
     "telegraf": "^4.5.2",
+    "telegraf-postgres-session": "^1.0.5",
     "translatte": "^3.0.1"
   },
   "devDependencies": {
