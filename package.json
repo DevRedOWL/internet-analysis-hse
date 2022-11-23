@@ -10,7 +10,8 @@
     "start": "node index.js",
     "db:drop": "./node_modules/.bin/sequelize db:drop",
     "db:recreate": "yarn db:drop && ./node_modules/.bin/sequelize db:create",
-    "up": "docker-compose down && docker-compose up --force-recreate --build -d"
+    "up": "docker-compose down && docker-compose up --force-recreate --build -d",
+    "lint": "eslint ./"
   },
   "dependencies": {
     "apos-to-lex-form": "^1.0.5",
@@ -24,6 +25,7 @@
     "natural": "^5.1.11",
     "node-telegram-bot-api": "^0.56.0",
     "pg": "^8.7.1",
+    "prettier": "^2.8.0",
     "sequelize": "^6.17.0",
     "spelling-corrector": "^3.0.0",
     "stopword": "^1.0.11",
@@ -33,6 +35,13 @@
     "translatte": "^3.0.1"
   },
   "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-import-resolver-typescript": "^2.6.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jest": "^24.4.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-unused-imports": "^2.0.0",
     "sequelize-cli": "^6.4.1"
   }
 }

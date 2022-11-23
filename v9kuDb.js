@@ -102,7 +102,7 @@ V9kuVote.init(
 async function init(callback) {
   await sequelize.sync({ alter: true });
   await sequelize.query(
-    'CREATE TABLE IF NOT EXISTS telegraf_session(id varchar, session varchar);',
+    'CREATE TABLE IF NOT EXISTS postgress_sessions(id varchar PRIMARY KEY, session varchar);',
   );
   try {
     await V9kuMatch.create({

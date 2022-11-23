@@ -1,0 +1,20 @@
+name: ESLint CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - forrum-bot
+
+jobs:
+  link:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: borales/actions-yarn@v3.0.0
+        with:
+          cmd: install # will run `yarn install` command
+      - uses: borales/actions-yarn@v3.0.0
+        with:
+          cmd: lint # will run `yarn lint` command

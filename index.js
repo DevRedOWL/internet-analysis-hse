@@ -4,7 +4,6 @@ import v9kuApp from './v9kuClient.js';
 const v9kuInitPromise = new Promise(async (resolve) => {
   await v9kuInitDb(async () => {
     console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] DB ready`);
-    await v9kuApp.initSession();
     await v9kuApp.launch();
   });
   resolve();

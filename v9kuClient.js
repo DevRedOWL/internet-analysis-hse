@@ -1,6 +1,5 @@
-import { Telegraf, Scenes, session } from 'telegraf';
+import { Telegraf, Scenes } from 'telegraf';
 import { markdownTable } from 'markdown-table';
-import axios from 'axios';
 import stringWidth from 'string-width';
 import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote } from './v9kuDb.js';
 import {
@@ -8,30 +7,31 @@ import {
   matchCaptionBuilder,
   votedCaptionBuilder,
   extractMessageContext,
-  timeFormatConfig,
 } from './v9kuService.js';
 import SceneBuilder from './v9kuScenes.js';
-import { db, credentials } from './config.js';
+import { db, credentials, admins } from './config.js';
 import PostgresSession from 'telegraf-postgres-session';
 
 // Настройка бота
 const bot = new Telegraf(credentials.v9ku_token);
-bot.initSession = async () => {
-  const pgSession = new PostgresSession({
-    connectionString: `${db.dialect}://${db.user}:${db.password}@${db.host}:${db.port}/${db.database}`,
-    ssl: false,
-  }).middleware();
-  await bot.use(pgSession);
-  console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] Session ready`);
-};
+const pgSession = new PostgresSession({
+  connectionString: `${db.dialect}://${db.user}:${db.password}@${db.host}:${db.port}/${db.database}`,
+  ssl: false,
+}).middleware();
+bot.use(pgSession);
 
 // Сцены
 const createEventScene = new SceneBuilder().EventCreateScene();
 const stage = new Scenes.Stage([createEventScene]);
 bot.use(stage.middleware());
 bot.command('create', async (ctx) => {
-  ctx.scene.enter('create');
+  if (admins.list.indexOf(ctx.from.id) !== -1) {
+    ctx.scene.enter('create');
+  } else {
+    ctx.reply('Многовато ты захотел, дорогой, в админку вход строго по пропускам');
+  }
 });
+console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] Session storage ready`);
 
 // Служебные команды
 bot.start(async (ctx) => {
@@ -106,10 +106,11 @@ bot.command('rating', async (ctx) => {
 
 bot.command('score', async (ctx) => {
   const user = await V9kuUser.findOne({ where: { userId: ctx.from.id } });
-  if (!user)
+  if (!user) {
     return ctx.replyWithMarkdown(
       `Ваш профиль не настроен, возможно не приняты условия использования`,
     );
+  }
   const votesCount = await V9kuVote.count({ where: { userId: ctx.from.id } });
   const table = markdownTable(
     [
@@ -169,8 +170,11 @@ for (let i = 1; i <= 2; i++) {
         },
       });
       const score = j < 6 ? j : -1;
-      if (i === 1) await V9kuVote.update({ team1: score }, { where: { id: vote.id } });
-      else if (i === 2) await V9kuVote.update({ team2: score }, { where: { id: vote.id } });
+      if (i === 1) {
+        await V9kuVote.update({ team1: score }, { where: { id: vote.id } });
+      } else if (i === 2) {
+        await V9kuVote.update({ team2: score }, { where: { id: vote.id } });
+      }
       try {
         await ctx.editMessageText(
           `Выберите, сколько забъет каждая команда, затем, нажмите "Сохранить прогноз"`,

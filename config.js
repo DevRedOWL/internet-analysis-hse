@@ -1,8 +1,8 @@
 import { config } from 'dotenv';
 config();
 
-export const admin = {
-  list: [236413395], // Я, Дима
+export const admins = {
+  list: [236413395, 146023566], // Я, Дима
   error_message: 'У вас недостаточно прав для совершения данного действия',
 };
 
