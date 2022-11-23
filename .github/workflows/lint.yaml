@@ -8,7 +8,7 @@ on:
 
 jobs:
   link:
-    name: Lint
+    name: Lint app
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

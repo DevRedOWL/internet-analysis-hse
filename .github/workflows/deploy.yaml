@@ -1,0 +1,17 @@
+name: Deploy
+
+on:
+  pull_request:
+  push:
+    branches:
+      - forrum-bot
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # Setup key
+      - run: sudo apt-get install sshpass
+      - run: sshpass -p ${{ secrets.forrum_pass }} ssh root@${{ secrets.forrum_ip }}
+      - run: echo "It works"
