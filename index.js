@@ -1,6 +1,7 @@
 // V9ku bot
 import { init as v9kuInitDb } from './v9kuDb.js';
 import v9kuApp from './v9kuClient.js';
+import { admins } from './config.js';
 const v9kuInitPromise = new Promise(async (resolve) => {
   await v9kuInitDb(async () => {
     console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] DB ready`);
