@@ -31,5 +31,5 @@ jobs:
       # Setup key
       - run: sudo apt-get install sshpass
         name: 'Install sshpass'
-      - run: sshpass -p ${{ secrets.FORRUM_PASSWORD }} ssh root@${{ secrets.FORRUM_IP }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null 'cd /var/www/internet-analysis-hse  && git pull && docker-compose up --force-recreate --build -d && docker ps -a'
+      - run: sshpass -p ${{ secrets.FORRUM_PASSWORD }} ssh root@${{ secrets.FORRUM_IP }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null 'cd /var/www/internet-analysis-hse  && git pull && docker compose up --force-recreate --build -d && docker ps -a'
         name: 'Connect to VPS and restart app'

@@ -1,5 +1,5 @@
 {
-  "plugins": ["unused-imports", "jest", "prettier"],
+  "plugins": ["jest", "prettier"],
   "extends": [
     "plugin:prettier/recommended",
     "plugin:import/recommended",
@@ -25,8 +25,7 @@
     "jest/no-focused-tests": "error",
     "jest/no-identical-title": "error",
     "jest/prefer-to-have-length": "warn",
-    "jest/valid-expect": "error",
-    "unused-imports/no-unused-imports": "error"
+    "jest/valid-expect": "error"
   },
   "parserOptions": {
     "ecmaVersion": 8,
