@@ -1,42 +1,40 @@
 version: '3.8'
 
 services:
-    telegram-app-db:
-        image: postgres:13.4-alpine
-        restart: always
-        volumes:
-          - pg-data:/var/lib/postgresql/data
-        container_name: telegram-app-db
-        environment:
-          POSTGRES_USER: authusr
-          POSTGRES_PASSWORD: auth123
-          POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_DB: telegram-app
-          WAIT_FOR_DB: 'true'
-        ports:
-          - 5439:5432
-        networks:
-          - app-net
+  telegram-app-db:
+    image: postgres:13.4-alpine
+    restart: always
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    container_name: telegram-app-db
+    environment:
+      POSTGRES_USER: authusr
+      POSTGRES_PASSWORD: auth123
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: telegram-app
+      WAIT_FOR_DB: 'true'
+    ports:
+      - 5439:5432
+    networks:
+      - app-net
 
-    app:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        container_name: telegram-app
-        environment:
-          - NODE_ENV=${ENV:-development}
-        depends_on:
-           - "telegram-app-db"
-            # condition: service_healthy
-        ports:
-          - '1488:${SERVER_PORT:-1488}'
-        networks:
-          - app-net
+  telegram-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-app
+    environment:
+      - NODE_ENV=${ENV:-development}
+    depends_on:
+      - "telegram-app-db" # condition: service_healthy
+    ports:
+      - '1488:${SERVER_PORT:-1488}'
+    networks:
+      - app-net
 
 networks:
-    app-net:
-        name: app-net
+  app-net:
+    name: app-net
 
 volumes:
-    pg-data:
-      #driver: local
+  pg-data: #driver: local
