@@ -7,30 +7,30 @@ on:
       - forrum-bot
 
 jobs:
-  lint:
-    name: Lint app
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        name: 'Checkout'
-      - uses: borales/actions-yarn@v3.0.0
-        name: 'Install dependencies'
-        with:
-          cmd: install # will run `yarn install` command
-      - uses: borales/actions-yarn@v3.0.0
-        name: 'Run eslint'
-        with:
-          cmd: lint # will run `yarn lint` command
+#   lint:
+#     name: Lint app
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#         name: 'Checkout'
+#       - uses: borales/actions-yarn@v3.0.0
+#         name: 'Install dependencies'
+#         with:
+#           cmd: install # will run `yarn install` command
+#       - uses: borales/actions-yarn@v3.0.0
+#         name: 'Run eslint'
+#         with:
+#           cmd: lint # will run `yarn lint` command
 
   deploy:
-    needs: lint
-    if: always()
+    # $needs: lint
+    # if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       # Setup key
       - run: sudo apt-get install sshpass
         name: 'Install sshpass'
-      - run: sshpass -p ${{ secrets.FORRUM_PASSWORD }} ssh root@${{ secrets.FORRUM_IP }}
+      - run: sshpass -p ${{ secrets.FORRUM_PASSWORD }} ssh root@${{ secrets.FORRUM_IP }} -t -t
         name: 'Connect to VPS'
       - run: echo "It works"
