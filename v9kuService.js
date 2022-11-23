@@ -1,4 +1,4 @@
-import { V9kuMatch, V9kuMessage } from './v9kuDb.js';
+import { V9kuMatch, V9kuMessage, Op } from './v9kuDb.js';
 
 export const scoreButtonsBuilder = (team1, team2, selectedButton = { 1: null, 2: null }) => {
   const generatedButtons = [

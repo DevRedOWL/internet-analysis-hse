@@ -13,6 +13,7 @@ import { db, credentials, admins } from './config.js';
 import PostgresSession from 'telegraf-postgres-session';
 
 // Настройка бота
+console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] Starting a bot...`);
 const bot = new Telegraf(credentials.v9ku_token);
 const pgSession = new PostgresSession({
   connectionString: `${db.dialect}://${db.user}:${db.password}@${db.host}:${db.port}/${db.database}`,
@@ -31,7 +32,6 @@ bot.command('create', async (ctx) => {
     ctx.reply('Многовато ты захотел, дорогой, в админку вход строго по пропускам');
   }
 });
-console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] Session storage ready`);
 
 // Служебные команды
 bot.start(async (ctx) => {

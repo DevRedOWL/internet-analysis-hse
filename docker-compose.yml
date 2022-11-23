@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: telegram-app
       WAIT_FOR_DB: 'true'
     ports:
-      - 5432:5432
+      - 5432:${DB_PORT:-5432}
     networks:
       - app-net
 
