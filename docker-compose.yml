@@ -14,7 +14,7 @@ services:
       POSTGRES_DB: telegram-app
       WAIT_FOR_DB: 'true'
     ports:
-      - 5439:5432
+      - 5432:5432
     networks:
       - app-net
 
@@ -42,7 +42,6 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     volumes:
       - pgadmin:/var/lib/pgadmin
-
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     networks:
@@ -55,3 +54,4 @@ networks:
 
 volumes:
   pg-data: #driver: local
+  pgadmin:
