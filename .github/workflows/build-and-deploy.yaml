@@ -31,6 +31,6 @@ jobs:
       # Setup key
       - run: sudo apt-get install sshpass
         name: 'Install sshpass'
-      - run: sshpass -p ${{ secrets.FORRUM_PASSWORD }} ssh root@${{ secrets.FORRUM_IP }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t -t
+      - run: sshpass -p ${{ secrets.FORRUM_PASSWORD }} ssh root@${{ secrets.FORRUM_IP }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
         name: 'Connect to VPS'
       - run: echo "It works"
