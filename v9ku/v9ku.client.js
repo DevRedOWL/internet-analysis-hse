@@ -1,14 +1,14 @@
 import { Telegraf, Scenes } from 'telegraf';
 import { markdownTable } from 'markdown-table';
-import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote } from './v9kuDb.js';
+import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote } from './v9ku.db.js';
 import {
   scoreButtonsBuilder,
   matchCaptionBuilder,
   votedCaptionBuilder,
   extractMessageContext,
-} from './v9kuService.js';
-import SceneBuilder from './v9kuScenes.js';
-import { db, credentials, admins } from './config.js';
+} from './v9ku.service.js';
+import SceneBuilder from './v9ku.scenes.js';
+import { db, credentials, admins } from '../config.js';
 import PostgresSession from 'telegraf-postgres-session';
 
 // Настройка бота
@@ -162,6 +162,7 @@ bot.command('test', async (ctx) => {
   });
   await V9kuMessage.create({
     messageId: message.message_id,
+    userId: ctx.from.id,
     matchId: matchData.id,
   });
 });

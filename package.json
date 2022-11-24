@@ -23,6 +23,7 @@
     "jsdom": "^19.0.0",
     "markdown-table": "^3.0.2",
     "natural": "^5.1.11",
+    "node-schedule": "^2.1.0",
     "node-telegram-bot-api": "^0.56.0",
     "pg": "^8.7.1",
     "prettier": "^2.8.0",

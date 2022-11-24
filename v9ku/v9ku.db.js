@@ -1,5 +1,5 @@
 import { Sequelize, Model, DataTypes, Op } from 'sequelize';
-import { db } from './config.js';
+import { db } from '../config.js';
 
 const { dialect, user, password, host, port, database } = db;
 const sequelize = new Sequelize(`${dialect}://${user}:${password}@${host}:${port}/${database}`, {
@@ -70,6 +70,7 @@ V9kuMessage.init(
       allowNull: false,
       type: DataTypes.INTEGER,
     },
+    userId: DataTypes.INTEGER,
     messageId: DataTypes.INTEGER,
     matchId: DataTypes.INTEGER,
   },

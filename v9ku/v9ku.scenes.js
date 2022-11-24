@@ -1,6 +1,7 @@
 import { Scenes } from 'telegraf';
-import { timeFormatConfig, countReward, matchCaptionBuilder } from './v9kuService.js';
-import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9kuDb.js';
+import { timeFormatConfig, countReward, matchCaptionBuilder } from './v9ku.service.js';
+import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
+import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
 
 export default class SceneBuilder {
   EventCreateScene() {
@@ -100,6 +101,9 @@ export default class SceneBuilder {
           },
           { transaction: t },
         );
+        // Заносим событие в календарь
+        await v9kuEventScheduler.scheduleEvents(matchData);
+
         const caption = `Команды: ${matchData.team1} - ${matchData.team2}
 Время: ${matchData.date.toLocaleString('ru-RU', timeFormatConfig)} мск.
 ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
@@ -119,6 +123,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
               await V9kuMessage.create(
                 {
                   messageId: message.message_id,
+                  userId: user.userId,
                   matchId: matchData.id,
                 },
                 { transaction: t },
@@ -208,6 +213,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
     scoreScene.enter(async (ctx) => {
       const matchData = await V9kuMatch.findOne({
         where: { score: null, date: { [Op.lte]: new Date() } },
+        order: [['date', 'ASC']],
       });
       if (!matchData) {
         await ctx.reply('Больше не осталось матчей без счета, для выхода введите /exit');
