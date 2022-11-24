@@ -93,3 +93,30 @@ export const extractMessageContext = async (ctx) => {
   });
   return { messageData, matchData };
 };
+
+export const countReward = (vote, score) => {
+  // Точно угадал счет
+  if (vote.team1 === Number(score[0]) && vote.team2 === Number(score[1])) {
+    return 4;
+  }
+  // Угадал разницу счетов
+  else if (Math.abs(vote.team1 - vote.team2) === Math.abs(Number(score[0]) - Number(score[1]))) {
+    return 2;
+  }
+  // Угадал ничью
+  else if (vote.team1 === vote.team2 && Number(score[0]) === Number(score[1])) {
+    return 2;
+  }
+  // Угадал, что победила команда 1
+  else if (vote.team1 > vote.team2 && Number(score[0]) > Number(score[1])) {
+    return 1;
+  }
+  // Угадал, что победила команда 2
+  else if (vote.team2 > vote.team1 && Number(score[1]) > Number(score[0])) {
+    return 1;
+  }
+  // Совсем не угадал
+  else {
+    return 0;
+  }
+};

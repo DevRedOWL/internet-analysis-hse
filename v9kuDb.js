@@ -18,7 +18,7 @@ V9kuUser.init(
     },
     userId: DataTypes.INTEGER,
     score: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DECIMAL,
       defaultValue: 0,
     },
     name: DataTypes.STRING,
@@ -47,6 +47,11 @@ V9kuMatch.init(
     team1: DataTypes.STRING,
     team2: DataTypes.STRING,
     score: DataTypes.ARRAY(DataTypes.INTEGER),
+    coef: {
+      type: DataTypes.FLOAT,
+      defaultValue: 1.0,
+      allowNull: false,
+    },
     date: {
       type: DataTypes.DATE,
       allowNull: false,

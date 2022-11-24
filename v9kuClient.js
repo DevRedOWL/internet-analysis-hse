@@ -1,6 +1,5 @@
 import { Telegraf, Scenes } from 'telegraf';
 import { markdownTable } from 'markdown-table';
-import stringWidth from 'string-width';
 import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote } from './v9kuDb.js';
 import {
   scoreButtonsBuilder,
@@ -23,13 +22,29 @@ bot.use(pgSession);
 
 // Сцены
 const createEventScene = new SceneBuilder().EventCreateScene();
-const stage = new Scenes.Stage([createEventScene]);
+const setScoreScene = new SceneBuilder().ScoreSetScene();
+const sendingScene = new SceneBuilder().SendingScene();
+const stage = new Scenes.Stage([createEventScene, setScoreScene, sendingScene]);
 bot.use(stage.middleware());
-bot.command('create', async (ctx) => {
+bot.command('create_match', async (ctx) => {
   if (admins.list.indexOf(ctx.from.id) !== -1) {
-    ctx.scene.enter('create');
+    ctx.scene.enter('create_match');
   } else {
-    ctx.reply('Многовато ты захотел, дорогой, в админку вход строго по пропускам');
+    ctx.reply(admins.error_message);
+  }
+});
+bot.command('set_score', async (ctx) => {
+  if (admins.list.indexOf(ctx.from.id) !== -1) {
+    ctx.scene.enter('set_score');
+  } else {
+    ctx.reply(admins.error_message);
+  }
+});
+bot.command('sending', async (ctx) => {
+  if (admins.list.indexOf(ctx.from.id) !== -1) {
+    ctx.scene.enter('sending');
+  } else {
+    ctx.reply(admins.error_message);
   }
 });
 
@@ -64,16 +79,25 @@ bot.on('contact', async (ctx) => {
     },
     { where: { id: user.id } },
   );
+  const adminCommands =
+    admins.list.indexOf(ctx.from.id) !== -1
+      ? [
+          { command: 'create_match', description: '[Админ] Создать матч' },
+          { command: 'set_score', description: '[Админ] Завершить матч' },
+          { command: 'sending', description: '[Админ] Выполнить рассылку' },
+        ]
+      : [];
   ctx.telegram.setMyCommands([
+    ...adminCommands,
     { command: 'score', description: 'Мой счет' },
     { command: 'rating', description: 'Рейтинг' },
-    { command: 'start', description: 'Получить эту инструкцию еще раз' },
+    { command: 'help', description: 'Инструкция' },
   ]);
   ctx.reply(`${ctx.from.first_name}, теперь вы можете принимать участие в прогнозах!`, {
     reply_markup: { remove_keyboard: true },
   });
 });
-bot.help((ctx) => ctx.reply('Введите /start для отображения меню'));
+bot.help((ctx) => ctx.reply('Здесь должна быть инструкция, но ее пока никто не написал'));
 
 // Настройка рассылки
 bot.command('stop', async (ctx) => {
@@ -97,7 +121,6 @@ bot.command('rating', async (ctx) => {
       (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.trim(0, 30),
     ]);
   const table = markdownTable([['Место', 'Счет', 'Имя'], ...formattedUsers], {
-    stringLength: stringWidth,
     delimiterStart: false,
     delimiterEnd: false,
   });
@@ -112,22 +135,21 @@ bot.command('score', async (ctx) => {
     );
   }
   const votesCount = await V9kuVote.count({ where: { userId: ctx.from.id } });
-  const table = markdownTable(
-    [
-      ['Ваши результаты'],
-      ['Общий счет', user.score],
-      ['Всего прогнозов', votesCount],
-      ['Дата регистрации', user.createdAt.toLocaleDateString('ru-RU')],
-    ],
-    {
-      stringLength: stringWidth,
-    },
-  );
+  const table = markdownTable([
+    ['Ваши результаты'],
+    ['Общий счет', user.score],
+    ['Всего прогнозов', votesCount],
+    ['Дата регистрации', user.createdAt.toLocaleDateString('ru-RU')],
+  ]);
   ctx.replyWithMarkdown(`\`\`\`\n${table}\n\`\`\``);
 });
 
 // Тестовый
 bot.command('test', async (ctx) => {
+  if (admins.list.indexOf(ctx.from.id) === -1) {
+    ctx.reply(admins.error_message);
+  }
+
   const matchData = await V9kuMatch.findOne({
     where: { id: 0 },
   });
@@ -146,18 +168,22 @@ bot.command('test', async (ctx) => {
 
 // Прогнозы
 bot.action('predict', async (ctx) => {
-  const { matchData } = await extractMessageContext(ctx);
-  if (new Date() > new Date(matchData.date.getTime() - 60000)) {
-    return await ctx.editMessageText('Время голосования за этот матч вышло');
-  }
-  await ctx.editMessageText(
-    `Выберите, сколько забъет каждая команда, \nзатем, нажмите "Предсказать"\n\nЕсли выбираете 6+, не забудьте после сохранения\nотправить точный ответ @DimaTomchuk`,
-    {
-      reply_markup: {
-        inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2),
+  try {
+    const { matchData } = await extractMessageContext(ctx);
+    if (new Date() > new Date(matchData.date.getTime() - 60000)) {
+      return await ctx.editMessageText('Время голосования за этот матч вышло');
+    }
+    await ctx.editMessageText(
+      `Выберите, сколько забъет каждая команда, \nзатем, нажмите "Предсказать"\n\nЕсли выбираете 6+, не забудьте после сохранения\nотправить точный ответ @DimaTomchuk`,
+      {
+        reply_markup: {
+          inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2),
+        },
       },
-    },
-  );
+    );
+  } catch (ex) {
+    return await ctx.editMessageText('Произошла ошибка, обратитесь к администратору');
+  }
 });
 for (let i = 1; i <= 2; i++) {
   for (let j = 0; j <= 6; j++) {
