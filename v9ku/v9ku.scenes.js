@@ -115,7 +115,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
           for (let user of users) {
             try {
               const caption = matchCaptionBuilder(user.name, matchData);
-              const message = await ctx.replyWithMarkdown(caption.text, {
+              const message = await ctx.telegram.sendMessage(user.userId, caption.text, {
                 reply_markup: {
                   inline_keyboard: [caption.buttons],
                 },
