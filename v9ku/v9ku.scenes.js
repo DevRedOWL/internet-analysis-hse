@@ -11,7 +11,7 @@ export default class SceneBuilder {
       EDIT_MENU: 'create_event_menu',
       EDIT_DATE: 'create_event_date',
       EDIT_TEAM: 'create_event_team',
-      EDIT_COEF: 'create_event_url',
+      EDIT_COEF: 'create_event_coef',
       EDIT_URL: 'create_event_url',
       SAVE_EVENT: 'create_event_save',
     };
