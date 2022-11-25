@@ -71,7 +71,7 @@ export default class SceneBuilder {
       ctx.session.createEvent.step = actionEnum.EDIT_TEAM;
       ctx.session.createEvent.teams = [];
       await ctx.editMessageText(
-        'Отправьте названия двух команд по очереди\n\nРекомендуется использовать флаги, например: 🇷🇺 Амкар',
+        'Отправьте названия двух команд по очереди\nРекомендуется использовать флаги, например: 🇷🇺 Амкар',
       );
       await ctx.reply('Отправьте название первой команды');
     });
@@ -224,7 +224,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       const caption = `Команды: ${matchData.team1} - ${matchData.team2}
 Время: ${matchData.date.toLocaleString('ru-RU', timeFormatConfig)} мск.
 ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
-      ctx.reply(`${caption}\n\nВведите счет для этого матча в формате 2:5, либо 2-5`, {
+      ctx.reply(`${caption}\nВведите счет для этого матча в формате 2:5, либо 2-5`, {
         reply_markup: {
           inline_keyboard: [
             [

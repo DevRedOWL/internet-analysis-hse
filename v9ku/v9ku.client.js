@@ -175,7 +175,7 @@ bot.action('predict', async (ctx) => {
       return await ctx.editMessageText('Время голосования за этот матч вышло');
     }
     await ctx.editMessageText(
-      `Выберите, сколько забъет каждая команда, \nзатем, нажмите "Предсказать"\n\nЕсли выбираете 6+, не забудьте после сохранения\nотправить точный ответ @DimaTomchuk`,
+      `Выберите, сколько забъет каждая команда, \nзатем, нажмите "Предсказать"\nЕсли выбираете 6+, не забудьте после сохранения\nотправить точный ответ @DimaTomchuk`,
       {
         reply_markup: {
           inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2),

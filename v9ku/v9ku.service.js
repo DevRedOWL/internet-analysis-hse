@@ -79,7 +79,6 @@ export const votedCaptionBuilder = (userName, matchData, voteData) => {
     }
 Для матча ${team1} - ${team2}
 
-  
 Результаты после ${matchData.date.toLocaleString('ru-RU', timeFormatConfig)} мск.`,
   };
 };
