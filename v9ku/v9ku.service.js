@@ -36,7 +36,7 @@ export const timeFormatConfig = {
   year: 'numeric',
   hour: 'numeric',
   minute: '2-digit',
-  timezone: 'Russia/Moscow',
+  timeZone: 'Europe/Moscow',
 };
 
 export const matchCaptionBuilder = (userName, matchData) => {
