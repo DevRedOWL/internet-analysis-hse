@@ -19,7 +19,7 @@ export class V9kuTableRenderer {
         {
           title: `${teamTexts[0]} – ${teamTexts[1]}`,
           dataIndex: `${match.id}`,
-          width: 5 * `${teamTexts[0]} – ${teamTexts[1]}`.length,
+          width: 12 * `${teamTexts[0]} – ${teamTexts[1]}`.length,
           align: 'center',
         },
       ],

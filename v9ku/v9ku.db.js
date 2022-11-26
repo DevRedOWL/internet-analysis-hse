@@ -21,6 +21,10 @@ V9kuUser.init(
       type: DataTypes.DECIMAL,
       defaultValue: 0,
     },
+    perfect: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
     name: DataTypes.STRING,
     phone: DataTypes.STRING,
     lastRequest: {

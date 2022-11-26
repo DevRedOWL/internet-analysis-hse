@@ -272,15 +272,19 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
             transaction: t,
           });
           for (let vote of votes) {
-            const reward = countReward(vote, score) * updatedEvent.coef;
+            const rawReward = countReward(vote, score);
+            const reward = rawReward * updatedEvent.coef;
             await V9kuUser.update(
-              { score: sequelize.literal(`score + ${reward}`) },
+              {
+                score: sequelize.literal(`score + ${reward}`),
+                perfect: sequelize.literal(`perfect + ${rawReward === 4 ? 1 : 0}`),
+              },
               { where: { userId: vote.userId }, returning: true, transaction: t },
             );
             ctx.telegram
               .sendMessage(
                 vote.userId,
-                `Вы получили ${reward} очков за матч ${updatedEvent.team1} - ${updatedEvent.team2}!`,
+                `Вы получили ${reward} очков за матч ${updatedEvent.team1} - ${updatedEvent.team2}!\nСчет матча: ⚽ ${updatedEvent.score[0]} - ${updatedEvent.score[1]}`,
               )
               .catch((ex) => {
                 console.log(`Unable to deliver message to ${vote.userId}`, ex);
@@ -342,7 +346,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
           try {
             await ctx.telegram.sendMessage(
               user.userId,
-              '⚡ [Рассылка от администратора]\n\n' + msg,
+              '⚡ Рассылка от администратора\n\n' + msg,
             );
           } catch (ex) {
             console.log(`Blocked user ${user.userId}`);
