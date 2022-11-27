@@ -16,7 +16,7 @@ V9kuUser.init(
       allowNull: false,
       type: DataTypes.INTEGER,
     },
-    userId: DataTypes.INTEGER,
+    userId: DataTypes.BIGINT,
     score: {
       type: DataTypes.DECIMAL,
       defaultValue: 0,
@@ -74,7 +74,7 @@ V9kuMessage.init(
       allowNull: false,
       type: DataTypes.INTEGER,
     },
-    userId: DataTypes.INTEGER,
+    userId: DataTypes.BIGINT,
     messageId: DataTypes.INTEGER,
     matchId: DataTypes.INTEGER,
   },
@@ -101,7 +101,7 @@ V9kuVote.init(
     },
     userId: {
       allowNull: false,
-      type: DataTypes.INTEGER,
+      type: DataTypes.BIGINT,
     },
     team1: DataTypes.INTEGER,
     team2: DataTypes.INTEGER,
