@@ -119,7 +119,7 @@ async function init(callback) {
       id: 0,
       team1: '🇦🇷 Агрентина',
       team2: '🇯🇲 Ямайка',
-      date: new Date(1998, 06, 21, 18 - 3, 50),
+      date: new Date(1998, 6, 21, 18 - 3, 50),
       url: 'https://www.championat.com/football/article-4583417-argentina-yamajka-5-0-kak-slozhilis-sudby-geroev-pesni-gruppy-chajf-i-uchastnikov-matcha-chempionata-mira-1998-goda.html',
     });
   } catch (ex) {}
