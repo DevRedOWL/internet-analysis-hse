@@ -101,12 +101,8 @@ export const countReward = (vote, score) => {
   if (vote.team1 === Number(score[0]) && vote.team2 === Number(score[1])) {
     return 4;
   }
-  // Угадал разницу счетов
-  else if (Math.abs(vote.team1 - vote.team2) === Math.abs(Number(score[0]) - Number(score[1]))) {
-    return 2;
-  }
-  // Угадал ничью
-  else if (vote.team1 === vote.team2 && Number(score[0]) === Number(score[1])) {
+  // Угадал разницу счетов, либо ничью
+  else if (vote.team1 - vote.team2 === Number(score[0]) - Number(score[1])) {
     return 2;
   }
   // Угадал, что победила команда 1
@@ -142,5 +138,5 @@ export function buildCommands(userId) {
 }
 
 export function buildAllCommands() {
-  return [...commands.user, ...commands.admin];
+  return [...commands.user];
 }

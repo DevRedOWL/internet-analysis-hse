@@ -112,24 +112,27 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         try {
           const users = await V9kuUser.findAll({ where: { enabled: true } });
 
-          for (let user of users) {
-            try {
-              const caption = matchCaptionBuilder(user.name, matchData);
-              const message = await ctx.telegram.sendMessage(user.userId, caption.text, {
-                reply_markup: {
-                  inline_keyboard: [caption.buttons],
-                },
-              });
-              await V9kuMessage.create(
-                {
-                  messageId: message.message_id,
-                  userId: user.userId,
-                  matchId: matchData.id,
-                },
-                { transaction: t },
-              );
-            } catch (ex) {
-              console.log(`Blocked user ${user.userId}`);
+          // Если осталось менее, чем 28 часов до матча
+          if (new Date() > new Date(matchData.date.getTime() - 28 * 60 * 60 * 1000)) {
+            for (let user of users) {
+              try {
+                const caption = matchCaptionBuilder(user.name, matchData);
+                const message = await ctx.telegram.sendMessage(user.userId, caption.text, {
+                  reply_markup: {
+                    inline_keyboard: [caption.buttons],
+                  },
+                });
+                await V9kuMessage.create(
+                  {
+                    messageId: message.message_id,
+                    userId: user.userId,
+                    matchId: matchData.id,
+                  },
+                  { transaction: t },
+                );
+              } catch (ex) {
+                console.log(`Blocked user ${user.userId}`);
+              }
             }
           }
           await t.commit();
@@ -284,7 +287,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
             ctx.telegram
               .sendMessage(
                 vote.userId,
-                `Вы получили ${reward} очков за матч ${updatedEvent.team1} - ${updatedEvent.team2}!\nСчет матча: ⚽ ${updatedEvent.score[0]} - ${updatedEvent.score[1]}`,
+                `Вы получили ${reward} очков за матч ${updatedEvent.team1} - ${updatedEvent.team2}\nСчет: ⚽ ${updatedEvent.score[0]} - ${updatedEvent.score[1]}`,
               )
               .catch((ex) => {
                 console.log(`Unable to deliver message to ${vote.userId}`, ex);
@@ -344,10 +347,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         const users = await V9kuUser.findAll({ where: { enabled: true } });
         for (let user of users) {
           try {
-            await ctx.telegram.sendMessage(
-              user.userId,
-              '⚡ Рассылка от администратора\n\n' + msg,
-            );
+            await ctx.telegram.sendMessage(user.userId, '⚡ Рассылка от администратора\n\n' + msg);
           } catch (ex) {
             console.log(`Blocked user ${user.userId}`);
           }
