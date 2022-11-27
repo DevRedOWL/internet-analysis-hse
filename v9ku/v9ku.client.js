@@ -6,6 +6,7 @@ import {
   matchCaptionBuilder,
   votedCaptionBuilder,
   extractMessageContext,
+  buildAllCommands,
 } from './v9ku.service.js';
 import SceneBuilder from './v9ku.scenes.js';
 import { db, credentials, admins } from '../config.js';
@@ -79,20 +80,9 @@ bot.on('contact', async (ctx) => {
     },
     { where: { id: user.id } },
   );
-  const adminCommands =
-    admins.list.indexOf(ctx.from.id) !== -1
-      ? [
-          { command: 'create_match', description: '[Админ] Создать матч' },
-          { command: 'set_score', description: '[Админ] Завершить матч' },
-          { command: 'sending', description: '[Админ] Выполнить рассылку' },
-        ]
-      : [];
-  ctx.telegram.setMyCommands([
-    ...adminCommands,
-    { command: 'score', description: 'Мой счет' },
-    { command: 'rating', description: 'Рейтинг' },
-    { command: 'help', description: 'Инструкция' },
-  ]);
+  ctx.telegram.setMyCommands(buildAllCommands(), {
+    scope: { type: 'chat', chat_id: ctx.from.id },
+  });
   ctx.reply(`${ctx.from.first_name}, теперь вы можете принимать участие в прогнозах!`, {
     reply_markup: { remove_keyboard: true },
   });
@@ -212,20 +202,15 @@ for (let i = 1; i <= 2; i++) {
         },
       });
       const score = j < 6 ? j : -1;
-      if (i === 1) {
-        await V9kuVote.update({ team1: score }, { where: { id: vote.id } });
-      } else if (i === 2) {
-        await V9kuVote.update({ team2: score }, { where: { id: vote.id } });
-      }
+      await V9kuVote.update({ [`team${i}`]: score }, { where: { id: vote.id } });
       try {
-        console.log(i, j, i === 2 ? j : vote.team2);
         await ctx.editMessageText(
           `Выберите, сколько забъет каждая команда, затем, нажмите "Сохранить прогноз"`,
           {
             reply_markup: {
               inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2, {
-                1: i === 1 ? j : vote.team1 > 0 ? vote.team1 : 6,
-                2: i === 2 ? j : vote.team2 > 0 ? vote.team1 : 6,
+                1: i === 1 ? j : vote.team1 >= 0 ? vote.team1 : 6,
+                2: i === 2 ? j : vote.team2 >= 0 ? vote.team2 : 6,
               }),
             },
           },
@@ -247,7 +232,7 @@ bot.action('confirm_prediction', async (ctx) => {
       userId: ctx.from.id,
     },
   });
-  if (voteData && voteData.team1 && voteData.team2) {
+  if (voteData && typeof voteData.team1 == 'number' && typeof voteData.team2 == 'number') {
     const caption = votedCaptionBuilder(ctx.from.first_name, matchData, voteData);
 
     await ctx.editMessageText(caption.text, {

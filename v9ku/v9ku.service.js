@@ -1,4 +1,5 @@
 import { V9kuMatch, V9kuMessage, Op } from './v9ku.db.js';
+import { admins } from '../config.js';
 
 export const scoreButtonsBuilder = (team1, team2, selectedButton = { 1: null, 2: null }) => {
   const generatedButtons = [
@@ -8,7 +9,9 @@ export const scoreButtonsBuilder = (team1, team2, selectedButton = { 1: null, 2:
     [],
     [
       {
-        text: `${selectedButton[1] && selectedButton[2] ? '✅' : '❎'} Сохранить прогноз`,
+        text: `${
+          typeof selectedButton[1] == 'number' && typeof selectedButton[2] == 'number' ? '✅' : '❎'
+        } Сохранить прогноз`,
         callback_data: 'confirm_prediction',
       },
     ],
@@ -119,3 +122,25 @@ export const countReward = (vote, score) => {
     return 0;
   }
 };
+
+const commands = {
+  admin: [
+    { command: 'create_match', description: '[Админ] Создать матч' },
+    { command: 'set_score', description: '[Админ] Завершить матч' },
+    { command: 'sending', description: '[Админ] Выполнить рассылку' },
+  ],
+  user: [
+    { command: 'score', description: 'Мой счет' },
+    { command: 'rating', description: 'Рейтинг' },
+    { command: 'help', description: 'Инструкция' },
+  ],
+};
+
+export function buildCommands(userId) {
+  const adminCommands = admins.list.indexOf(userId) !== -1 ? commands.admin : [];
+  return [...adminCommands, ...commands.user];
+}
+
+export function buildAllCommands() {
+  return [...commands.user, ...commands.admin];
+}
