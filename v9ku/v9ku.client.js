@@ -1,6 +1,6 @@
 import { Telegraf, Scenes } from 'telegraf';
 import { markdownTable } from 'markdown-table';
-import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote } from './v9ku.db.js';
+import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote, Op } from './v9ku.db.js';
 import {
   scoreButtonsBuilder,
   matchCaptionBuilder,
@@ -75,7 +75,7 @@ bot.on('contact', async (ctx) => {
   await V9kuUser.update(
     {
       phone: ctx.message.contact.phone_number,
-      name: `${ctx.message.contact.first_name} ${ctx.message.contact.last_name}`,
+      name: `${ctx.message.contact.first_name} ${ctx.message.contact.last_name || ''}`.trim(),
       enabled: true,
     },
     { where: { id: user.id } },
@@ -117,7 +117,7 @@ bot.command('stop', async (ctx) => {
 
 // Счет
 bot.command('rating', async (ctx) => {
-  const formattedUsers = (await V9kuUser.findAll({ limit: 30 }))
+  const formattedUsers = (await V9kuUser.findAll({ where: { name: { [Op.ne]: null } }, limit: 30 }))
     .sort((u1, u2) => (u1.score > u2.score ? -1 : 1))
     .map((user, idx) => [
       idx + 1,
@@ -195,6 +195,9 @@ for (let i = 1; i <= 2; i++) {
   for (let j = 0; j <= 6; j++) {
     bot.action(`team${i}_${j}`, async (ctx) => {
       const { matchData } = await extractMessageContext(ctx);
+      if (new Date() > new Date(matchData.date.getTime() - 60000)) {
+        return await ctx.editMessageText('Время голосования за этот матч вышло');
+      }
       const [vote] = await V9kuVote.findOrCreate({
         where: {
           matchId: matchData.id,
