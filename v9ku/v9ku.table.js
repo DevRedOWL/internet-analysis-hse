@@ -9,8 +9,8 @@ const renderTable = TableRenderer.default().render;
 export class V9kuTableRenderer {
   static async renderMatch(match) {
     const teamTexts = [
-      match.team1.replace(/[^a-zа-я0-9 ]/gi, ''),
-      match.team2.replace(/[^a-zа-я0-9 ]/gi, ''),
+      match.team1.replace(/[^a-zа-я0-9 \-]/gi, ''),
+      match.team2.replace(/[^a-zа-я0-9 \-]/gi, ''),
     ];
     const table = {
       title: `Результаты на ${match.date.getDate()}.${match.date.getMonth()}`,
@@ -19,7 +19,7 @@ export class V9kuTableRenderer {
         {
           title: `${teamTexts[0]} – ${teamTexts[1]}`,
           dataIndex: `${match.id}`,
-          width: 12 * `${teamTexts[0]} – ${teamTexts[1]}`.length,
+          width: 5.5 * `${teamTexts[0]} – ${teamTexts[1]}`.length,
           align: 'center',
         },
       ],
@@ -29,7 +29,7 @@ export class V9kuTableRenderer {
     for (let vote of votes) {
       const user = await V9kuUser.findOne({ where: { userId: vote.userId } });
       table.dataSource.push({ [match.id]: `${vote.team1} – ${vote.team2}`, name: user.name });
-      console.log(vote);
+      // console.log(vote); FIXME: Выводим голоса
     }
     const dir = './results/';
     if (!fs.existsSync(dir)) {
@@ -80,6 +80,7 @@ export class V9kuTableRenderer {
       });
       const votes = await V9kuVote.findAll({ where: { matchId: match.id } });
       for (let vote of votes) {
+        // FIXME: Sending
         console.log(vote);
       }
     }

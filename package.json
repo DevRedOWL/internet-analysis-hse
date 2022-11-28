@@ -27,7 +27,7 @@
     "prettier": "^2.8.0",
     "sequelize": "^6.25.8",
     "table-renderer": "^0.1.30",
-    "telegraf": "ˆ4.11.2",
+    "telegraf": "^4.11.2",
     "telegraf-postgres-session": "^1.0.5"
   },
   "devDependencies": {

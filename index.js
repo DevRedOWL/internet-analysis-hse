@@ -6,7 +6,7 @@ import v9kuApp from './v9ku/v9ku.client.js';
 const v9kuInitPromise = new Promise(async (resolve) => {
   await v9kuInitDb(async () => {
     console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] DB ready`);
-    await v9kuApp.launch();
+    v9kuApp.launch();
     await v9kuEventScheduler.init(v9kuApp);
     console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] Matches scheduled`);
   });

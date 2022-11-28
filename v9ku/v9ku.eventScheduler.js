@@ -32,6 +32,9 @@ class EventScheduler {
     for (let date of reminderDates) {
       if (date > new Date()) {
         scheduler.scheduleJob(date, async () => {
+          console.log(
+            `[${new Date().toLocaleString('ru-RU')}] [V9ku] Reminder sending for match ${event.id}`,
+          );
           const users = await V9kuUser.findAll({ where: { enabled: true } });
           for (let user of users) {
             try {
@@ -76,6 +79,9 @@ class EventScheduler {
     // Schedule photo sending
     const tableDate = new Date(event.date.getTime() - 1 * 60 * 60 * 1000);
     scheduler.scheduleJob(tableDate, async () => {
+      console.log(
+        `[${new Date().toLocaleString('ru-RU')}] [V9ku] Photo sending for match ${event.id}`,
+      );
       const matchPhoto = await V9kuTableRenderer.renderMatch(event);
       const users = await V9kuUser.findAll({ where: { enabled: true } });
       for (let user of users) {
