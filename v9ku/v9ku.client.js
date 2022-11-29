@@ -121,7 +121,7 @@ bot.command('rating', async (ctx) => {
     await V9kuUser.findAll({
       where: { name: { [Op.ne]: null } },
       order: [['score', 'DESC']],
-      limit: 30,
+      limit: 50,
     })
   ).map((user, idx) => [
     idx + 1,
@@ -133,7 +133,7 @@ bot.command('rating', async (ctx) => {
     delimiterStart: false,
     delimiterEnd: false,
   });
-  ctx.replyWithMarkdown(`*Лучшие 30 участников*\n\n\`\`\`\n${table}\n\`\`\``);
+  ctx.replyWithMarkdown(`*Турнирная таблица*\n\n\`\`\`\n${table}\n\`\`\``);
 });
 
 bot.command('score', async (ctx) => {
@@ -149,9 +149,7 @@ bot.command('score', async (ctx) => {
         where: { name: { [Op.ne]: null } },
         order: [['score', 'DESC']],
       })
-    ).findIndex((item) => {
-      item.userId == ctx.from.id;
-    }) + 1;
+    ).findIndex((item) => item.userId == ctx.from.id) + 1;
   const votesCount = await V9kuVote.count({ where: { userId: ctx.from.id } });
   const table = markdownTable([
     ['Ваши результаты'],
