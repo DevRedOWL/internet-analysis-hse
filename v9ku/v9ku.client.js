@@ -122,9 +122,10 @@ bot.command('rating', async (ctx) => {
     .map((user, idx) => [
       idx + 1,
       user.score,
-      (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.trim(0, 30),
+      user.perfect,
+      (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.trim(0, 13),
     ]);
-  const table = markdownTable([['Место', 'Счет', 'Имя'], ...formattedUsers], {
+  const table = markdownTable([['Место', 'Счет', 'Точных', 'Имя'], ...formattedUsers], {
     delimiterStart: false,
     delimiterEnd: false,
   });
@@ -142,7 +143,7 @@ bot.command('score', async (ctx) => {
   const table = markdownTable([
     ['Ваши результаты'],
     ['Общий счет', user.score],
-    ['Всего прогнозов', votesCount],
+    //['Всего прогнозов', votesCount],
     ['Точных прогнозов', user.perfect],
     //['Дата регистрации', user.createdAt.toLocaleDateString('ru-RU')],
   ]);
