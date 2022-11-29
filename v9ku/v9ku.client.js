@@ -149,7 +149,9 @@ bot.command('score', async (ctx) => {
         where: { name: { [Op.ne]: null } },
         order: [['score', 'DESC']],
       })
-    ).findIndex((item) => (item.userId = ctx.from.id)) + 1;
+    ).findIndex((item) => {
+      item.userId == ctx.from.id;
+    }) + 1;
   const votesCount = await V9kuVote.count({ where: { userId: ctx.from.id } });
   const table = markdownTable([
     ['Ваши результаты'],
