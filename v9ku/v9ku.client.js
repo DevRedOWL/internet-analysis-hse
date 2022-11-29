@@ -117,15 +117,19 @@ bot.command('stop', async (ctx) => {
 
 // Счет
 bot.command('rating', async (ctx) => {
-  const formattedUsers = (await V9kuUser.findAll({ where: { name: { [Op.ne]: null } }, limit: 30 }))
-    .sort((u1, u2) => (u1.score > u2.score ? -1 : 1))
-    .map((user, idx) => [
-      idx + 1,
-      user.score,
-      user.perfect,
-      (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.trim(0, 13),
-    ]);
-  const table = markdownTable([['Место', 'Счет', 'Точных', 'Имя'], ...formattedUsers], {
+  const formattedUsers = (
+    await V9kuUser.findAll({
+      where: { name: { [Op.ne]: null } },
+      order: [['score', 'DESC']],
+      limit: 30,
+    })
+  ).map((user, idx) => [
+    idx + 1,
+    user.score,
+    user.perfect,
+    (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.trim(0, 13),
+  ]);
+  const table = markdownTable([['Место', 'Счет', 'Гол', 'Имя'], ...formattedUsers], {
     delimiterStart: false,
     delimiterEnd: false,
   });
@@ -139,12 +143,20 @@ bot.command('score', async (ctx) => {
       `Ваш профиль не настроен, возможно не приняты условия использования`,
     );
   }
+  const place =
+    (
+      await V9kuUser.findAll({
+        where: { name: { [Op.ne]: null } },
+        order: [['score', 'DESC']],
+      })
+    ).findIndex((item) => (item.userId = ctx.from.id)) + 1;
   const votesCount = await V9kuVote.count({ where: { userId: ctx.from.id } });
   const table = markdownTable([
     ['Ваши результаты'],
     ['Общий счет', user.score],
     //['Всего прогнозов', votesCount],
     ['Точных прогнозов', user.perfect],
+    ['Место в рейтинге', place],
     //['Дата регистрации', user.createdAt.toLocaleDateString('ru-RU')],
   ]);
   ctx.replyWithMarkdown(`\`\`\`\n${table}\n\`\`\``);
