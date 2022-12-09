@@ -13,7 +13,19 @@ const v9kuInitPromise = new Promise(async (resolve) => {
   resolve();
 });
 
-Promise.all([v9kuInitPromise])
+// Forrum bot
+import { init as forrumInitDB } from './forrum/forrum.db.js';
+import forrumApp from './forrum/forrum.client.js';
+
+const forrumInitPromise = new Promise(async (resolve) => {
+  await forrumInitDB(async () => {
+    console.log(`[${new Date().toLocaleString('ru-RU')}] [Forrum] DB ready`);
+    forrumApp.launch();
+  });
+  resolve();
+});
+
+Promise.all([v9kuInitPromise, forrumInitPromise])
   .then(() => {
     console.log(`[${new Date().toLocaleString('ru-RU')}] All bots started`);
   })
