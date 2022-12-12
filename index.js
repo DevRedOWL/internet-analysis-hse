@@ -1,7 +1,7 @@
 // V9ku bot
 import { init as v9kuInitDb } from './v9ku/v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku/v9ku.eventScheduler.js';
-// import v9kuApp from './v9ku/v9ku.client.js';
+import v9kuApp from './v9ku/v9ku.client.js';
 
 const v9kuInitPromise = () => {
   return new Promise(async (resolve) => {
@@ -29,7 +29,7 @@ const forrumInitPromise = () => {
   });
 };
 
-Promise.all([forrumInitPromise()])
+Promise.all([v9kuInitPromise(), forrumInitPromise()])
   .then(() => {
     console.log(`[${new Date().toLocaleString('ru-RU')}] All bots started`);
   })

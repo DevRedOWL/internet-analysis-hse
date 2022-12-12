@@ -1,7 +1,7 @@
 import path from 'path';
 import { Scenes } from 'telegraf';
 import { ForrumProfile } from './forrum.db.js';
-import { ForrumProfileStatus, ForrumStatus } from './forrum.enum.js';
+import { ForrumProfileStatus, ForrumProfessionalStatus } from './forrum.enum.js';
 
 export default class SceneBuilder {
   ProfileScene() {

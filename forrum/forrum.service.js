@@ -1,11 +1,11 @@
 import path from 'path';
-import { ForrumStatus } from './forrum.enum.js';
+import { ForrumProfessionalStatus } from './forrum.enum.js';
 
 export const professionalStatusMarkup = [
   'Подтвердите свой статус предпринимателя или введите кодовое слово',
   {
     reply_markup: {
-      inline_keyboard: Object.entries(ForrumStatus).map((status) => {
+      inline_keyboard: Object.entries(ForrumProfessionalStatus).map((status) => {
         return [{ text: status[1], callback_data: `STATUS_${status[0]}` }];
       }),
     },

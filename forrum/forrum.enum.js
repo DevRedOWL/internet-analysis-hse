@@ -7,7 +7,7 @@ export const ForrumStep = {
   PROFILE: 6,
 };
 
-export const ForrumStatus = {
+export const ForrumProfessionalStatus = {
   1: 'Эконом',
   2: 'Комфорт',
   3: 'Комфорт+',

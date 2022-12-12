@@ -5,7 +5,7 @@ import { db, credentials, admins } from '../config.js';
 import PostgresSession from 'telegraf-postgres-session';
 import { ForrumUser } from './forrum.db.js';
 import {
-  ForrumStatus,
+  ForrumProfessionalStatus,
   ForrumStep,
   ForrumChallenges,
   ForrumChannels,
@@ -55,9 +55,9 @@ bot.start(async (ctx) => {
 bot.help((ctx) => ctx.replyWithMarkdown(`*Инструкция отсутствует*`));
 
 // Выбор статуса
-for (let statusId in ForrumStatus) {
+for (let statusId in ForrumProfessionalStatus) {
   bot.action(`STATUS_${statusId}`, async (ctx) => {
-    ctx.editMessageText(`Вы уверены, что хотите выбрать статус "${ForrumStatus[statusId]}"?`, {
+    ctx.editMessageText(`Вы уверены, что хотите выбрать статус "${ForrumProfessionalStatus[statusId]}"?`, {
       reply_markup: {
         inline_keyboard: [
           [{ text: 'Подтвердить', callback_data: 'confirm_status' }],
