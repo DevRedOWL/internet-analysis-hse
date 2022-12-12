@@ -2,11 +2,10 @@ import { Scenes } from 'telegraf';
 
 export default class SceneBuilder {
   ProfileScene() {
-    const scoreScene = new Scenes.BaseScene('profile');
+    const profileScene = new Scenes.BaseScene('profileScene');
 
-    scoreScene.enter(async (ctx) => {
-
-      ctx.reply(`Редактирование профиля`, {
+    profileScene.enter(async (ctx) => {
+      ctx.editMessageText(`Редактирование профиля`, {
         reply_markup: {
           inline_keyboard: [
             [
@@ -20,21 +19,22 @@ export default class SceneBuilder {
       });
     });
 
-    scoreScene.action('EXIT_MENU', async (ctx) => {
-      await ctx.reply('Вы вышли из режима ввода очков');
-      ctx.session.currentEvent = undefined;
+    profileScene.action('EXIT_MENU', async (ctx) => {
+      await ctx.editMessageText('Вы вышли из редактирования профиля', {
+        reply_markup: {
+          inline_keyboard: [[{ text: 'Вернуться к редактированию', callback_data: 'profile' }]],
+        },
+      });
+      ctx.session.profile = undefined;
       return await ctx.scene.leave();
     });
 
-    scoreScene.on('text', async (ctx) => {
+    profileScene.on('text', async (ctx) => {
       const url = ctx.message.text.trim();
-
-
     });
 
-    scoreScene.leave((ctx) => { });
+    profileScene.leave((ctx) => {});
 
-    return scoreScene;
+    return profileScene;
   }
-
 }

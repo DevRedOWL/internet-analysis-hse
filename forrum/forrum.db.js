@@ -1,5 +1,6 @@
 import { Sequelize, Model, DataTypes, Op } from 'sequelize';
 import { db } from '../config.js';
+import { ForrumStep } from './forrum.enum.js';
 
 const { dialect, user, password, host, port, database } = db;
 const sequelize = new Sequelize(`${dialect}://${user}:${password}@${host}:${port}/${database}`, {
@@ -7,7 +8,7 @@ const sequelize = new Sequelize(`${dialect}://${user}:${password}@${host}:${port
   query: { raw: true },
 });
 
-class ForrumUser extends Model { }
+class ForrumUser extends Model {}
 ForrumUser.init(
   {
     id: {
@@ -19,7 +20,8 @@ ForrumUser.init(
     userId: DataTypes.INTEGER,
     name: DataTypes.STRING,
     phone: DataTypes.STRING,
-    step: DataTypes.STRING,
+    step: { type: DataTypes.STRING, defaultValue: ForrumStep.GREETING },
+    status: DataTypes.STRING,
     lastRequest: {
       type: DataTypes.DATE,
       defaultValue: new Date(Date.now() - 5 * 60000),
