@@ -4,7 +4,13 @@ import SceneBuilder from './forrum.scenes.js';
 import { db, credentials, admins } from '../config.js';
 import PostgresSession from 'telegraf-postgres-session';
 import { ForrumUser } from './forrum.db.js';
-import { ForrumStatus, ForrumStep, ForrumChallenges, ForrumChannels } from './forrum.enum.js';
+import {
+  ForrumStatus,
+  ForrumStep,
+  ForrumChallenges,
+  ForrumChannels,
+  ForrumSecretPhrases,
+} from './forrum.enum.js';
 import { professionalStatusMarkup, profileOffer } from './forrum.service.js';
 
 // Настройка бота
@@ -38,7 +44,7 @@ bot.start(async (ctx) => {
     return await ForrumUser.update(
       {
         step: ForrumStep.PROFESSIONAL_STATUS,
-        //enabled: true,
+        enabled: true,
       },
       { where: { userId: ctx.from.id } },
     );
@@ -165,19 +171,35 @@ bot.action('profile', async (ctx) => {
 
 // Настройка рассылки
 bot.command('stop', async (ctx) => {
-  const [user] = await ForrumUser.findOrCreate({
-    where: {
-      userId: ctx.from.id,
+  const [user] = await ForrumUser.update(
+    { enabled: false },
+    {
+      where: {
+        userId: ctx.from.id,
+      },
     },
-  });
-  user.enabled = false;
-  await user.save();
+  );
   return ctx.reply('Рассылка прекращена');
 });
 
 // Обработка любого сообщения
 bot.on('message', async (ctx) => {
   const { text } = ctx.message;
+  const user = await ForrumUser.findOne({ where: { userId: ctx.from.id } });
+  if (user.step == ForrumStep.PROFESSIONAL_STATUS) {
+    if (ForrumSecretPhrases.indexOf(text.trim()) !== -1) {
+      ctx.reply('Понял вас!');
+      await ForrumUser.update(
+        { step: ForrumStep.VIEW_MEMBERS },
+        { where: { userId: ctx.from.id } },
+      );
+      return await profileOffer(ctx);
+    } else {
+      return ctx.reply(
+        'Кодовое слово некорректно! :(\nОбратитесь в поддержку, если вам нужна помощь',
+      );
+    }
+  }
   // TODO: Add secret phrase support
   return ctx.reply('Я не понимаю эту команду');
 });
