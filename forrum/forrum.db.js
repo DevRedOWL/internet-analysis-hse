@@ -1,6 +1,6 @@
 import { Sequelize, Model, DataTypes, Op } from 'sequelize';
 import { db } from '../config.js';
-import { ForrumStep } from './forrum.enum.js';
+import { ForrumStep, ForrumProfileStatus } from './forrum.enum.js';
 
 const { dialect, user, password, host, port, database } = db;
 const sequelize = new Sequelize(`${dialect}://${user}:${password}@${host}:${port}/${database}`, {
@@ -34,9 +34,29 @@ ForrumUser.init(
   { sequelize, modelName: 'forrum_user' },
 );
 
+class ForrumProfile extends Model {}
+ForrumProfile.init(
+  {
+    id: {
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+      type: DataTypes.INTEGER,
+    },
+    userId: DataTypes.INTEGER,
+    text: DataTypes.STRING,
+    photo: DataTypes.STRING,
+    status: {
+      type: DataTypes.STRING,
+      defaultValue: ForrumProfileStatus.IN_PROGRESS,
+    },
+  },
+  { sequelize, modelName: 'forrum_profile' },
+);
+
 async function init(callback) {
   await sequelize.sync({ alter: true });
   return callback();
 }
 
-export { Op, sequelize, init, ForrumUser };
+export { Op, sequelize, init, ForrumUser, ForrumProfile };

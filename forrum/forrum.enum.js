@@ -29,3 +29,10 @@ export const ForrumChannels = {
   main: 'tg://resolve?domain=forrum_admin_bot',
   profiles: 'tg://resolve?domain=forrum_admin_bot',
 };
+
+export const ForrumProfileStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  WAITING_FOR_REVIEW: 'WAITING_FOR_REVIEW',
+  APPROVED: 'APPROVED',
+  DECLINED: 'DECLINED',
+};
