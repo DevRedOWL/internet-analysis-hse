@@ -57,14 +57,17 @@ bot.help((ctx) => ctx.replyWithMarkdown(`*Инструкция отсутств�
 // Выбор статуса
 for (let statusId in ForrumProfessionalStatus) {
   bot.action(`STATUS_${statusId}`, async (ctx) => {
-    ctx.editMessageText(`Вы уверены, что хотите выбрать статус "${ForrumProfessionalStatus[statusId]}"?`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Подтвердить', callback_data: 'confirm_status' }],
-          [{ text: 'Вернуться', callback_data: 'decline_status' }],
-        ],
+    ctx.editMessageText(
+      `Вы уверены, что хотите выбрать статус "${ForrumProfessionalStatus[statusId]}"?`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'Подтвердить', callback_data: 'confirm_status' }],
+            [{ text: 'Вернуться', callback_data: 'decline_status' }],
+          ],
+        },
       },
-    });
+    );
     return await ForrumUser.update({ status: statusId }, { where: { userId: ctx.from.id } });
   });
 }
