@@ -14,7 +14,6 @@ jobs:
         name: 'Checkout'
       - run: npm install --global npm@latest
       - run: npm install --global node-gyp@latest
-      - run: npm config set node_gyp $(npm prefix -g)/lib/node_modules/node-gyp/bin/node-gyp.js
       - run: python3 --version
       - run: python3 -m pip --version
       - uses: borales/actions-yarn@v3.0.0
