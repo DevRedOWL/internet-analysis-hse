@@ -1,0 +1,23 @@
+name: Deploy
+
+on:
+  pull_request:
+    branches:
+      - forrum-bot
+
+jobs:
+  lint:
+    name: Lint app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        name: 'Checkout'
+      - uses: borales/actions-yarn@v3.0.0
+        name: 'Install dependencies'
+        with:
+          cmd: install --ignore-scripts # will run `yarn install` command
+      - uses: borales/actions-yarn@v3.0.0
+        name: 'Run eslint'
+        with:
+          cmd: lint # will run `yarn lint` command
+
