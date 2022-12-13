@@ -11,7 +11,7 @@ import {
   ForrumChannels,
   ForrumSecretPhrases,
 } from './forrum.enum.js';
-import { professionalStatusMarkup, profileOffer } from './forrum.service.js';
+import { getPrices, professionalStatusMarkup, profileOffer } from './forrum.service.js';
 
 // Настройка бота
 console.log(`[${new Date().toLocaleString('ru-RU')}] [Forrum] Starting a bot...`);
@@ -35,12 +35,14 @@ bot.start(async (ctx) => {
     },
   });
   if (!user.enabled) {
-    await ctx.reply(`Приветственный текст, после которого идет видео`);
+    await ctx.reply(`Привет! Добро пожаловать в FORRUM-бот 🤝 
+И спасибо, что вы проявили интерес к нашей платформе! Нам тоже не терпится начать работу, но сначала - слово основателя🤓
+    `);
     await ctx.replyWithVideoNote({
       source: path.join('./forrum/', '/forrum.welcome.mp4'),
       filename: 'forrum_welcome.mp4',
     });
-    ctx.replyWithMarkdownV2(...professionalStatusMarkup);
+    ctx.reply(...professionalStatusMarkup);
     return await ForrumUser.update(
       {
         step: ForrumStep.PROFESSIONAL_STATUS,
@@ -58,7 +60,7 @@ bot.help((ctx) => ctx.replyWithMarkdown(`*Инструкция отсутств�
 for (let statusId in ForrumProfessionalStatus) {
   bot.action(`STATUS_${statusId}`, async (ctx) => {
     ctx.editMessageText(
-      `Вы уверены, что хотите выбрать статус "${ForrumProfessionalStatus[statusId]}"?`,
+      `Спасибо за ответ! \nПожалуйста, подтвердите выбор - вы "${ForrumProfessionalStatus[statusId]}"?`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -78,7 +80,7 @@ bot.action(`confirm_status`, async (ctx) => {
   await ForrumUser.update({ step: ForrumStep.QUIZ }, { where: { userId: ctx.from.id } });
   ctx.editMessageText('Статус сохранен');
   ctx.replyWithPoll(
-    'С какими трудностями вы сталкивались в своей деятельности?',
+    'Пожалуйста, поделитесь, сталкивались ли вы с какими-то из этих вызовов как предприниматель/руководитель за прошедший год?',
     ForrumChallenges,
     {
       allows_multiple_answers: true,
@@ -93,21 +95,16 @@ bot.on('poll_answer', async (ctx) => {
   if (step == ForrumStep.QUIZ) {
     await ctx.telegram.sendMessage(
       ctx.pollAnswer.user.id,
-      'В кризисное время тысячи руководителей по всей России были в таком же шоке как и ты, да и мы тоже, если честно, ну ничего, присоединяйся и ща разберемся че кого',
+      'В кризисное время тысячи руководителей по всей России ищут необходимые ответы и новые опоры для себя и своего бизнеса. \nЭти и другие вопросы участники решают в FORRUM. Обмен кейсами и опытом, поддержка со стороны равных и открытый диалог помогают предпринимателям и руководителям совершать меньше ошибок и находить новые возможности для развития бизнеса. FORRUM позволяет взглянуть на проблемы с других ракурсов!🏄‍♂️',
     );
     await ForrumUser.update(
       { step: ForrumStep.CONFIRM_PRICES },
       { where: { userId: ctx.pollAnswer.user.id } },
     );
-    await ctx.telegram.sendMessage(ctx.pollAnswer.user.id, 'Стоимость участия', {
+    await ctx.telegram.sendMessage(ctx.pollAnswer.user.id, getPrices(), {
       reply_markup: {
         inline_keyboard: [
-          [
-            {
-              text: 'Отлично, двигаемся дальше!',
-              callback_data: 'confirm_prices',
-            },
-          ],
+          [{ text: 'Отлично, двигаемся дальше!', callback_data: 'confirm_prices' }],
         ],
       },
     });
@@ -116,14 +113,17 @@ bot.on('poll_answer', async (ctx) => {
 
 // Прайс
 bot.action('confirm_prices', async (ctx) => {
-  await ctx.editMessageText('Стоимость участия'); // FIXME: Don't forget
-  return ctx.replyWithMarkdown('Чтобы продолжить, поделитесь с нами вашим номером телефона!', {
-    reply_markup: {
-      one_time_keyboard: true,
-      keyboard: [[{ text: 'Подтвердить участие', request_contact: true }]],
-      force_reply: true,
+  await ctx.editMessageText(getPrices());
+  return ctx.replyWithMarkdown(
+    'Чтобы продолжить, пожалуйста, поделитесь с нами вашим номером телефона. Так нам будет проще связаться с вами в дальнейшем 🙌',
+    {
+      reply_markup: {
+        one_time_keyboard: true,
+        keyboard: [[{ text: 'Подтвердить участие', request_contact: true }]],
+        force_reply: true,
+      },
     },
-  });
+  );
 });
 bot.on('contact', async (ctx) => {
   const user = await ForrumUser.findOne({ where: { userId: ctx.from.id } });
@@ -136,7 +136,7 @@ bot.on('contact', async (ctx) => {
       },
       { where: { id: user.id } },
     );
-    ctx.reply(`${ctx.from.first_name}, хотите посмотреть, кто уже состоит в FORRUM?`, {
+    ctx.reply(`${ctx.from.first_name}, хотите посмотреть, кто уже присоеденился к FORRUM?`, {
       reply_markup: {
         remove_keyboard: true,
         inline_keyboard: [
@@ -152,16 +152,19 @@ bot.on('contact', async (ctx) => {
 
 // Просмотр участников
 bot.action('view_members', async (ctx) => {
-  await ctx.editMessageText(`Можете посмотреть всех участников в нашем канале`, {
-    reply_markup: {
-      inline_keyboard: [[{ text: 'Перейти в канал', url: ForrumChannels.profiles }]],
-      force_reply: true,
+  await ctx.editMessageText(
+    `Вы можете познакомиться с первыми участниками в канале. Ждем с нетерпением, когда здесь появится и ваш профиль 🚀`,
+    {
+      reply_markup: {
+        inline_keyboard: [[{ text: 'Перейти в канал', url: ForrumChannels.profiles }]],
+        force_reply: true,
+      },
     },
-  });
+  );
   return await profileOffer(ctx);
 });
 bot.action('skip_members', async (ctx) => {
-  await ctx.editMessageText(`Хорошо! Тогда идем дальше`);
+  await ctx.editMessageText(`Хорошо! Тогда идем дальше 👇`);
   return await profileOffer(ctx);
 });
 

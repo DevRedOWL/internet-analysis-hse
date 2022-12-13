@@ -39,7 +39,7 @@ export default class SceneBuilder {
     profileScene.action('EDIT_TEXT', async (ctx) => {
       ctx.session.profile.step = 'EDIT_TEXT';
       return await ctx.editMessageText(
-        'Отправьте текст для вашего профиля\nРекомендации: [text_recommendations]',
+        'Пожалуйста, отправьте нам краткий рассказ о себе в ответном сообщении на примере профиля выше. \nРасскажите о ваших хобби, увлечениях, любимых вещах и классных проектах 😎',
         {
           reply_markup: {
             inline_keyboard: [[{ text: `Вернуться к редактированию`, callback_data: 'REENTER' }]],
@@ -51,7 +51,7 @@ export default class SceneBuilder {
     profileScene.action('EDIT_PHOTO', async (ctx) => {
       ctx.session.profile.step = 'EDIT_PHOTO';
       return await ctx.editMessageText(
-        'Отправьте фотографию для вашего профиля\nРекомендации: [photo_recommendations]',
+        'А сейчас, пожалуйста, отправьте нам свою фотографию - это важно, потому что так другим участникам будет легче вас узнать в дальнейшем 👥',
         {
           reply_markup: {
             inline_keyboard: [[{ text: `Вернуться к редактированию`, callback_data: 'REENTER' }]],
@@ -62,10 +62,12 @@ export default class SceneBuilder {
 
     profileScene.action('PREVIEW_PROFILE', async (ctx) => {
       if (!ctx.session.profile.photo || !ctx.session.profile.text) {
-        await ctx.editMessageText('Профиль не заполнен полностью');
+        await ctx.editMessageText(
+          'Кажется, ваш профиль не заполнен полностью: \nдополните его текстом или фотографией, чтобы мы могли разместить его в канале!',
+        );
         return await ctx.scene.reenter();
       }
-      await ctx.editMessageText('Ваш профиль будет выглядеть так:');
+      await ctx.editMessageText('Отлично! Теперь ваш профиль будет выглядеть так:');
       await ctx.sendPhoto(
         { url: ctx.session.profile.photo },
         { caption: ctx.session.profile.text },
@@ -75,7 +77,9 @@ export default class SceneBuilder {
 
     profileScene.action('SUBMIT_PROFILE', async (ctx) => {
       if (!ctx.session.profile.photo || !ctx.session.profile.text) {
-        await ctx.editMessageText('Профиль не заполнен полностью');
+        await ctx.editMessageText(
+          'Кажется, ваш профиль не заполнен полностью: \nдополните его текстом или фотографией, чтобы мы могли разместить его в канале!',
+        );
         return await ctx.scene.reenter();
       }
       await ctx.editMessageText('Ваш профиль будет выглядеть так:');
@@ -94,7 +98,14 @@ export default class SceneBuilder {
     });
 
     profileScene.action('CONFIRM_PROFILE', async (ctx) => {
-      await ctx.editMessageText('Профиль сохранен, ожидайте ответа администратора', {});
+      await ctx.editMessageText(
+        `Отлично! Ваш профиль отправлен на модерацию. 
+Мы постараемся обработать и разместить его как можно скорее!
+Обратитесь в поддержку, если у вас остались вопросы о платформе или формате участия.
+Будем на связи, команда FORRUM!🚀
+    `,
+        {},
+      );
       await ForrumProfile.update(
         {
           text: ctx.session.profile.text,
@@ -108,7 +119,7 @@ export default class SceneBuilder {
     });
 
     profileScene.action('REENTER', async (ctx) => {
-      ctx.editMessageText('Возврат в меню...');
+      ctx.deleteMessage();
       return await ctx.scene.reenter();
     });
 
