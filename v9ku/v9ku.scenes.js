@@ -131,6 +131,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
                   { transaction: t },
                 );
               } catch (ex) {
+                await V9kuUser.update({ enabled: false }, { where: { userId: user.userId } });
                 console.log(`Blocked user ${user.userId}`);
               }
             }

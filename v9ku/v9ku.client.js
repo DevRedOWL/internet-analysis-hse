@@ -119,7 +119,7 @@ bot.command('stop', async (ctx) => {
 bot.command('rating', async (ctx) => {
   const formattedUsers = (
     await V9kuUser.findAll({
-      where: { name: { [Op.ne]: null } },
+      where: { name: { [Op.ne]: null, enabled: true } },
       order: [['score', 'DESC']],
       limit: 50,
     })
@@ -127,7 +127,7 @@ bot.command('rating', async (ctx) => {
     idx + 1,
     user.score,
     user.perfect,
-    (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.trim(0, 13),
+    (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.substr(0, 11),
   ]);
   const table = markdownTable([['Место', 'Счет', 'Гол', 'Имя'], ...formattedUsers], {
     delimiterStart: false,
