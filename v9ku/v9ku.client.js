@@ -119,7 +119,7 @@ bot.command('stop', async (ctx) => {
 bot.command('rating', async (ctx) => {
   const formattedUsers = (
     await V9kuUser.findAll({
-      where: { name: { [Op.ne]: null, enabled: true } },
+      where: { name: { [Op.ne]: null }, enabled: true },
       order: [['score', 'DESC']],
       limit: 50,
     })
