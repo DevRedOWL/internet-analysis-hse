@@ -350,6 +350,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
           try {
             await ctx.telegram.sendMessage(user.userId, '⚡ Рассылка от администратора\n\n' + msg);
           } catch (ex) {
+            await V9kuUser.update({ enabled: false }, { where: { userId: user.userId } });
             console.log(`Blocked user ${user.userId}`);
           }
         }
