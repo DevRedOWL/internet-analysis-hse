@@ -2,11 +2,11 @@ version: '3.8'
 
 services:
   telegram-app-db:
-    image: postgres:13.4-alpine
     restart: always
+    container_name: telegram-app-db
+    image: postgres:13.4-alpine
     volumes:
       - pg-data:/var/lib/postgresql/data
-    container_name: telegram-app-db
     environment:
       POSTGRES_USER: authusr
       POSTGRES_PASSWORD: auth123
@@ -19,10 +19,11 @@ services:
       - app-net
 
   telegram-app:
+    restart: unless-stopped
+    container_name: telegram-app
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: telegram-app
     environment:
       - NODE_ENV=${ENV:-development}
     depends_on:
@@ -31,10 +32,10 @@ services:
       - '1488:${SERVER_PORT:-1488}'
     networks:
       - app-net
-    restart: unless-stopped
 
   pgadmin:
-    container_name: pgadmin_container
+    restart: unless-stopped
+    container_name: telegram-app-pgadmin
     image: dpage/pgadmin4
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
@@ -46,7 +47,31 @@ services:
       - "${PGADMIN_PORT:-5050}:80"
     networks:
       - app-net
+
+  redis:
     restart: unless-stopped
+    container_name: telegram-app-redis
+    image: redis:6.2-alpine
+    ports:
+      - ${REDIS_PORT:-6379}:6379
+    command: [ "redis-server", "--appendonly", "no", "--save", "" ]
+    networks:
+      - postgres
+      - app-net
+
+  bullboard:
+    restart: unless-stopped
+    container_name: telegram-app-bullboard
+    image: deadly0/bull-board
+    ports:
+      - ${BULL_BOARD_PORT:-6380}:3000
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+    networks:
+      - app-net
 
 networks:
   app-net:
