@@ -27,9 +27,17 @@ services:
     environment:
       - NODE_ENV=${ENV:-development}
     depends_on:
-      - "telegram-app-db" # condition: service_healthy
+      redis:
+        condition: service_healthy
+      telegram-app-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "yarn", "run", "healthcheck" ]
+      interval: 60s
+      timeout: 5s
+      retries: 10
     ports:
-      - '1488:${SERVER_PORT:-1488}'
+      - '${APP_PORT:-3000}:-3000'
     networks:
       - app-net
 
@@ -55,8 +63,12 @@ services:
     ports:
       - ${REDIS_PORT:-6379}:6379
     command: [ "redis-server", "--appendonly", "no", "--save", "" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 600s
+      timeout: 10s
+      retries: 10
     networks:
-      - postgres
       - app-net
 
   bullboard:
@@ -70,6 +82,7 @@ services:
       REDIS_PORT: 6379
     depends_on:
       - redis
+      - telegram-app
     networks:
       - app-net
 

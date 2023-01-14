@@ -1,6 +1,11 @@
 import { config } from 'dotenv';
 config();
 
+export const app = {
+  env: process.env.APP_ENV || 'development',
+  port: 3000,
+};
+
 export const admins = {
   list: [236413395, 146023566], // Я, Дима
   error_message: 'У вас недостаточно прав для совершения данного действия',

@@ -30,6 +30,10 @@ export class ForrumClient {
     });
   }
 
+  async stop(signal = 'SIGINT') {
+    await this.bot.stop(signal);
+  }
+
   constructor() {
     console.log(`[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Starting a bot...`);
     const bot = new Telegraf(credentials.forrum_token);
@@ -60,6 +64,7 @@ export class ForrumClient {
           filename: 'forrum_welcome.mp4',
         });
         ctx.reply(...professionalStatusMarkup);
+        await this.queue.notifyUser(ctx.from.id, ForrumStep.PROFESSIONAL_STATUS);
         return await ForrumUser.update(
           {
             step: ForrumStep.PROFESSIONAL_STATUS,
@@ -94,6 +99,7 @@ export class ForrumClient {
       ctx.editMessageText(...professionalStatusMarkup);
     });
     bot.action(`confirm_status`, async (ctx) => {
+      await this.queue.notifyUser(ctx.from.id, ForrumStep.PROFESSIONAL_STATUS);
       await ForrumUser.update({ step: ForrumStep.QUIZ }, { where: { userId: ctx.from.id } });
       ctx.editMessageText('Статус сохранен');
       ctx.replyWithPoll(
@@ -114,6 +120,7 @@ export class ForrumClient {
           ctx.pollAnswer.user.id,
           'В кризисное время тысячи руководителей по всей России ищут необходимые ответы и новые опоры для себя и своего бизнеса. \nЭти и другие вопросы участники решают в FORRUM. Обмен кейсами и опытом, поддержка со стороны равных и открытый диалог помогают предпринимателям и руководителям совершать меньше ошибок и находить новые возможности для развития бизнеса. FORRUM позволяет взглянуть на проблемы с других ракурсов!🏄‍♂️',
         );
+        await this.queue.notifyUser(ctx.pollAnswer.user.id, ForrumStep.CONFIRM_PRICES);
         await ForrumUser.update(
           { step: ForrumStep.CONFIRM_PRICES },
           { where: { userId: ctx.pollAnswer.user.id } },
@@ -145,6 +152,7 @@ export class ForrumClient {
     bot.on('contact', async (ctx) => {
       const user = await ForrumUser.findOne({ where: { userId: ctx.from.id } });
       if (user.step == ForrumStep.CONFIRM_PRICES) {
+        await this.queue.notifyUser(user.id, ForrumStep.VIEW_MEMBERS);
         await ForrumUser.update(
           {
             phone: ctx.message.contact.phone_number,
@@ -187,6 +195,7 @@ export class ForrumClient {
 
     // Заполнение профиля
     bot.action('profile', async (ctx) => {
+      await this.queue.notifyUser(ctx.from.id, ForrumStep.PROFILE);
       await ForrumUser.update({ step: ForrumStep.PROFILE }, { where: { userId: ctx.from.id } });
       await ctx.editMessageText(`Вы перешли к редактированию профиля`);
       ctx.scene.enter('profileScene');
@@ -212,9 +221,10 @@ export class ForrumClient {
       if (user.step == ForrumStep.PROFESSIONAL_STATUS) {
         if (ForrumSecretPhrases.indexOf(text.trim()) !== -1) {
           ctx.reply('Понял вас!');
+          await this.queue.notifyUser(user.userId, ForrumStep.VIEW_MEMBERS);
           await ForrumUser.update(
             { step: ForrumStep.VIEW_MEMBERS },
-            { where: { userId: ctx.from.id } },
+            { where: { userId: user.userId } },
           );
           return await profileOffer(ctx);
         } else {
@@ -226,10 +236,6 @@ export class ForrumClient {
       // TODO: Add secret phrase support
       return ctx.reply('Я не понимаю эту команду');
     });
-
-    // Enable graceful stop
-    process.once('SIGINT', () => bot.stop('SIGINT'));
-    process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
     // Set property
     this.bot = bot;

@@ -47,14 +47,14 @@ export class ForrumQueue {
   }
 
   async notificationProcessor(job) {
-    const { userId, customMessage } = job.data;
+    const { userId, customMessage, stepToNotify } = job.data;
     const user = await ForrumUser.findOne({ where: { userId } });
-    if (user.step !== ForrumStep.VALIDATION) {
+    if (user.step === stepToNotify) {
       await this.telegram.sendMessage(user.userId, customMessage || 'ТЕКСТ_НАПОМИНАНИЯ');
     }
   }
 
-  async notifyUser(userId, delay = 86400000, customMessage = null) {
-    this.queue.add('notification', { userId, customMessage }, { delay });
+  async notifyUser(userId, stepToNotify, delay = 86400000, customMessage = null) {
+    this.queue.add('notification', { userId, stepToNotify, customMessage }, { delay });
   }
 }

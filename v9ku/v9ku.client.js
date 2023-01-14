@@ -27,6 +27,10 @@ export class V9kuClient {
     });
   }
 
+  async stop(signal = 'SIGINT') {
+    await this.bot.stop(signal);
+  }
+
   constructor() {
     console.log(`[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Starting a bot...`);
     const bot = new Telegraf(credentials.v9ku_token);
@@ -279,9 +283,6 @@ export class V9kuClient {
       const text = ctx.message.text;
       return ctx.reply('Я не понимаю эту команду');
     });
-    // Enable graceful stop
-    process.once('SIGINT', () => bot.stop('SIGINT'));
-    process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
     // Set property
     this.bot = bot;
