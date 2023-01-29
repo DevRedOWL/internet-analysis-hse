@@ -11,11 +11,13 @@
     "db:drop": "./node_modules/.bin/sequelize db:drop",
     "db:recreate": "yarn db:drop && ./node_modules/.bin/sequelize db:create",
     "up": "docker-compose down && docker-compose up --force-recreate --build -d",
-    "lint": "eslint ./"
+    "lint": "eslint ./",
+    "healthcheck": "curl --fail http://localhost:3000/healthcheck || exit 1"
   },
   "dependencies": {
     "@typescript-eslint/parser": "^5.46.0",
     "axios": "^1.2.0",
+    "bullmq": "^3.5.6",
     "canvas": "^2.10.2",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
@@ -24,6 +26,7 @@
     "markdown-table": "^3.0.2",
     "node-schedule": "^2.1.0",
     "node-telegram-bot-api": "^0.60.0",
+    "path": "^0.12.7",
     "pg": "^8.8.0",
     "prettier": "^2.8.0",
     "sequelize": "^6.25.8",

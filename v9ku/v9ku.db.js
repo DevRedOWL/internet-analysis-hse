@@ -109,7 +109,7 @@ V9kuVote.init(
   { sequelize, modelName: 'v9ku_vote' },
 );
 
-async function init(callback) {
+async function initDB(callback) {
   await sequelize.sync({ alter: true });
   await sequelize.query(
     'CREATE TABLE IF NOT EXISTS postgress_sessions(id varchar PRIMARY KEY, session varchar);',
@@ -126,4 +126,4 @@ async function init(callback) {
   return callback();
 }
 
-export { Op, sequelize, init, V9kuUser, V9kuMatch, V9kuMessage, V9kuVote };
+export { Op, sequelize, initDB, V9kuUser, V9kuMatch, V9kuMessage, V9kuVote };
