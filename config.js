@@ -3,7 +3,7 @@ config();
 
 export const app = {
   env: process.env.APP_ENV || 'development',
-  port: 3000,
+  port: process.env.APP_PORT || 3000,
 };
 
 export const admins = {
