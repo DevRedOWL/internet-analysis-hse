@@ -26,11 +26,14 @@ services:
       dockerfile: Dockerfile
     environment:
       - NODE_ENV=${ENV:-development}
+      - DB_HOST=telegram-app-db
+      - DB_PORT=5432
+      - REDIS_HOST=redis
     depends_on:
       redis:
-        condition: service_healthy
+        condition: service_started
       telegram-app-db:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: [ "CMD", "yarn", "run", "healthcheck" ]
       interval: 60s
@@ -38,20 +41,6 @@ services:
       retries: 10
     ports:
       - '${APP_PORT:-3000}:${APP_PORT:-3000}'
-    networks:
-      - app-net
-
-  nginx-pgadmin:
-    image: laurentbel/nginx-basic-auth
-    ports:
-      - "5050:80"
-    depends_on:
-      - pgadmin
-    environment:
-      - FORWARD_HOST=pgadmin
-      - FORWARD_PORT=80
-      - BASIC_USERNAME=${DB_BASIC_AUTH_LOGIN}
-      - BASIC_PASSWORD=${DB_BASIC_AUTH_PASSWORD}
     networks:
       - app-net
 
@@ -64,6 +53,8 @@ services:
       PGADMIN_DEFAULT_EMAIL: 'admin@example.com'
       PGADMIN_DEFAULT_PASSWORD: 'supersecret'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports: 
+      - 5050:80
     volumes:
       - pgadmin:/var/lib/pgadmin
     networks:
@@ -81,21 +72,6 @@ services:
       interval: 600s
       timeout: 10s
       retries: 10
-    networks:
-      - app-net
-
-  bullboard:
-    restart: unless-stopped
-    container_name: telegram-app-bullboard
-    image: deadly0/bull-board
-    ports:
-      - ${BULL_BOARD_PORT:-6380}:3000
-    environment:
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    depends_on:
-      - redis
-      - telegram-app
     networks:
       - app-net
 

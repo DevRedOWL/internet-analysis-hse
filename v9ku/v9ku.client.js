@@ -6,7 +6,7 @@ import {
   matchCaptionBuilder,
   votedCaptionBuilder,
   extractMessageContext,
-  buildAllCommands,
+  buildCommands
 } from './v9ku.service.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
 import SceneBuilder from './v9ku.scenes.js';
@@ -99,7 +99,7 @@ export class V9kuClient {
         },
         { where: { id: user.id } },
       );
-      ctx.telegram.setMyCommands(buildAllCommands(), {
+      ctx.telegram.setMyCommands(buildCommands(ctx.from.id), {
         scope: { type: 'chat', chat_id: ctx.from.id },
       });
       ctx.reply(`${ctx.from.first_name}, теперь вы можете принимать участие в прогнозах!`, {
@@ -109,17 +109,17 @@ export class V9kuClient {
     bot.help((ctx) =>
       ctx.replyWithMarkdown(`*Инструкция:*
     
-    Привет! Я прогнозный бот и сделаю твою жизнь в турнире ярче и веселей ⚽️🤪
-    Каждый день буду отправлять прогнозы на матч, считать очки и составлять итоговую таблицу.
-    ‼️*За 1 час* до матча прием прогнозов завершается‼️
+Привет! Я прогнозный бот и сделаю твою жизнь в турнире ярче и веселей ⚽️🤪
+Каждый день буду отправлять прогнозы на матч, считать очки и составлять итоговую таблицу.
+‼️*За 1 час* до матча прием прогнозов завершается‼️
     
-    В меню ниже 3 команды:
-    /score - индивидуальные данные (общий счет / всего прогнозов / точные прогнозы )
-    /rating - общая таблица с результатами
-    /help - текущая инструкция и ответы на частозадаваемые вопросы
+В меню ниже 3 команды:
+/score - индивидуальные данные (общий счет / всего прогнозов / точные прогнозы )
+/rating - общая таблица с результатами
+/help - текущая инструкция и ответы на частозадаваемые вопросы
     
-    Удачи тебе!
-    P.S. По всем вопросам пиши @DimaTomchuk`),
+Удачи тебе!
+P.S. По всем вопросам пиши @DimaTomchuk`),
     );
 
     // Настройка рассылки
@@ -281,7 +281,17 @@ export class V9kuClient {
     // Обработка любого сообщения
     bot.on('message', async (ctx) => {
       const text = ctx.message.text;
-      return ctx.reply('Я не понимаю эту команду');
+
+      const [user] = await V9kuUser.findOrCreate({
+        where: {
+          userId: ctx.from.id,
+        },
+      });
+      if (user.enabled) {
+        return ctx.reply('Я не понимаю эту команду');
+      } else {
+        return ctx.reply('Добро пожаловать! Для того, чтобы начать, введите команду /start');
+      }
     });
 
     // Set property
