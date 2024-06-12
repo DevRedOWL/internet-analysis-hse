@@ -13,7 +13,7 @@ export class V9kuTableRenderer {
       match.team2.replace(/[^a-zа-я0-9 \-]/gi, ''),
     ];
     const table = {
-      title: `Результаты на ${match.date.getDate()}.${match.date.getMonth()}`,
+      title: `Результаты на ${match.date.getDate()}.${match.date.getMonth() + 1}`,
       columns: [
         { width: 350, title: 'Участник', dataIndex: 'name' },
         {
@@ -59,7 +59,7 @@ export class V9kuTableRenderer {
     });
 
     const table = {
-      title: `Результаты на ${start.getDate()}.${start.getMonth()}`,
+      title: `Результаты на ${start.getDate()}.${start.getMonth() + 1}`,
       columns: [{ width: 350, title: 'Участник', dataIndex: 'name' }],
       dataSource: [
         //'-',
