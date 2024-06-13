@@ -6,7 +6,7 @@ import { ForrumClient } from './forrum/forrum.client.js';
 // Handle bots and appliction
 const v9kuBot = new V9kuClient();
 const forrumBot = new ForrumClient();
-Promise.all([await v9kuBot.init(), await forrumBot.init()])
+Promise.all([await v9kuBot.init()])
   .then(() => {
     console.log(`[${new Date().toLocaleString('ru-RU')}] All bots started`);
     app.listen(config.port, () => {

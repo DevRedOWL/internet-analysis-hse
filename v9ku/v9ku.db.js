@@ -110,6 +110,7 @@ V9kuVote.init(
 );
 
 async function initDB(callback) {
+  await sequelize.authenticate();
   await sequelize.sync({ alter: true });
   await sequelize.query(
     'CREATE TABLE IF NOT EXISTS postgress_sessions(id varchar PRIMARY KEY, session varchar);',

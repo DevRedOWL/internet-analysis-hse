@@ -6,7 +6,7 @@ import {
   matchCaptionBuilder,
   votedCaptionBuilder,
   extractMessageContext,
-  buildCommands
+  buildCommands,
 } from './v9ku.service.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
 import SceneBuilder from './v9ku.scenes.js';
@@ -67,6 +67,22 @@ export class V9kuClient {
         ctx.reply(admins.error_message);
       }
     });
+    bot.command('reset_commands', async (ctx) => {
+      const users = await V9kuUser.findAll();
+      for (let user of users) {
+        const { userId } = user;
+        const commands = buildCommands(Number(userId));
+        console.log(
+          `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Setting ${
+            commands.length === 3 ? 'user' : 'admin'
+          } commands for ${userId}`,
+        );
+        await ctx.telegram.setMyCommands(commands, {
+          scope: { type: 'chat', chat_id: userId },
+        });
+      }
+      ctx.reply(`Команды обновлены для ${users.length} пользователей`);
+    });
 
     // Служебные команды
     bot.start(async (ctx) => {
@@ -100,7 +116,7 @@ export class V9kuClient {
         { where: { id: user.id } },
       );
       ctx.telegram.setMyCommands(buildCommands(ctx.from.id), {
-        scope: { type: 'chat', chat_id: ctx.from.id },
+        scope: { type: 'chat', chat_id: ctx.chat.id },
       });
       ctx.reply(`${ctx.from.first_name}, теперь вы можете принимать участие в прогнозах!`, {
         reply_markup: { remove_keyboard: true },
@@ -251,7 +267,10 @@ P.S. По всем вопросам пиши @DimaTomchuk`),
               },
             );
           } catch (ex) {
-            console.log('Юзер нажал ту же кнопку', ex.message);
+            console.log(
+              `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Юзер нажал ту же кнопку`,
+              ex.message,
+            );
           }
         });
       }

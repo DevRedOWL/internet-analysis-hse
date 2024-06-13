@@ -124,6 +124,7 @@ const commands = {
     { command: 'create_match', description: '[Админ] Создать матч' },
     { command: 'set_score', description: '[Админ] Завершить матч' },
     { command: 'sending', description: '[Админ] Выполнить рассылку' },
+    { command: 'reset_commands', description: '[Админ] Сбросить кнопки' },
   ],
   user: [
     { command: 'score', description: 'Мой счет' },
