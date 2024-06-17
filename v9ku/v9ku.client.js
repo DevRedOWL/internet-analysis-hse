@@ -236,6 +236,12 @@ P.S. По всем вопросам пиши @DimaTomchuk`),
           },
         );
       } catch (ex) {
+        console.log(
+          `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Ошибка голосования за матч [${
+            ex.message
+          }]`,
+          ex,
+        );
         return await ctx.editMessageText('Произошла ошибка, обратитесь к администратору');
       }
     });
