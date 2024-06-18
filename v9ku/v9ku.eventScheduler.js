@@ -2,6 +2,7 @@ import scheduler from 'node-schedule';
 import { V9kuMatch, V9kuUser, V9kuMessage, Op, V9kuVote } from './v9ku.db.js';
 import { matchCaptionBuilder } from './v9ku.service.js';
 import { V9kuTableRenderer } from './v9ku.table.js';
+import { v9kuConfig } from '../config.js';
 
 //V9kuTableRenderer.renderMatch(await V9kuMatch.findOne({ where: { id: 1 } }));
 
@@ -24,9 +25,9 @@ class EventScheduler {
 
   async scheduleEvents(event) {
     const reminderDates = [
-      new Date(event.date.getTime() - 28 * 60 * 60 * 1000),
-      new Date(event.date.getTime() - 6 * 60 * 60 * 1000),
-      new Date(event.date.getTime() - 3 * 60 * 60 * 1000),
+      new Date(event.date.getTime() - v9kuConfig.calls.first * 60 * 60 * 1000),
+      new Date(event.date.getTime() - v9kuConfig.calls.second * 60 * 60 * 1000),
+      new Date(event.date.getTime() - v9kuConfig.calls.third * 60 * 60 * 1000),
     ];
     // Schedule reminders
     for (let date of reminderDates) {
@@ -56,6 +57,7 @@ class EventScheduler {
               } else {
                 const caption = matchCaptionBuilder(user.name, event);
                 const message = await this.telegram.sendMessage(user.userId, caption.text, {
+                  parse_mode: 'MarkdownV2',
                   reply_markup: {
                     inline_keyboard: [caption.buttons],
                   },
@@ -77,7 +79,7 @@ class EventScheduler {
       }
     }
     // Schedule photo sending
-    const tableDate = new Date(event.date.getTime() - 1 * 60 * 60 * 1000);
+    const tableDate = new Date(event.date.getTime() - v9kuConfig.calls.last * 60 * 60 * 1000);
     scheduler.scheduleJob(tableDate, async () => {
       console.log(
         `[${new Date().toLocaleString('ru-RU')}] [V9ku] Photo sending for match ${event.id}`,

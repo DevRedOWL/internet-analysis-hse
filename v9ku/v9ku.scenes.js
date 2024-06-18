@@ -2,6 +2,8 @@ import { Scenes } from 'telegraf';
 import { timeFormatConfig, countReward, matchCaptionBuilder } from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
+import { message } from 'telegraf/filters';
+import { v9kuConfig } from '../config.js';
 
 export default class SceneBuilder {
   EventCreateScene() {
@@ -24,7 +26,7 @@ export default class SceneBuilder {
       }
 
       const event = ctx.session.createEvent;
-      ctx.reply('Редактирование мероприятия', {
+      ctx.reply('Редактирование мероприятия, для выхода введите /exit', {
         reply_markup: {
           inline_keyboard: [
             [
@@ -64,7 +66,8 @@ export default class SceneBuilder {
     eventScene.action(actionEnum.EDIT_DATE, async (ctx) => {
       ctx.session.createEvent.step = actionEnum.EDIT_DATE;
       await ctx.editMessageText(
-        'Отправьте дату матча в ответном сообщении в формате\nПример: 2022-09-19 16:30\n\nВремя устанавливается по мск.',
+        'Отправьте дату матча в ответном сообщении в формате\nПример: `2024-06-20 16:30`\n\nВремя устанавливается по мск\\.',
+        { parse_mode: 'MarkdownV2' },
       );
     });
     eventScene.action(actionEnum.EDIT_TEAM, async (ctx) => {
@@ -108,16 +111,29 @@ export default class SceneBuilder {
 Время: ${matchData.date.toLocaleString('ru-RU', timeFormatConfig)} мск.
 ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
 
-        // FIXME: Рассылка матча
+        try {
+          await ctx.editMessageText(`🏆 Матч сохранен!\n\n${caption}`);
+        } catch (ex) {
+          ctx.reply(
+            'Сработала система автоматического исправления дубликатов, вероятно, кнопка создания матча была нажата дважды',
+          );
+          await t.rollback();
+          return await ctx.scene.leave();
+        }
+
         try {
           const users = await V9kuUser.findAll({ where: { enabled: true } });
 
           // Если осталось менее, чем 28 часов до матча
-          if (new Date() > new Date(matchData.date.getTime() - 28 * 60 * 60 * 1000)) {
+          if (
+            new Date() >
+            new Date(matchData.date.getTime() - v9kuConfig.calls.first * 60 * 60 * 1000)
+          ) {
             for (let user of users) {
               try {
                 const caption = matchCaptionBuilder(user.name, matchData);
                 const message = await ctx.telegram.sendMessage(user.userId, caption.text, {
+                  parse_mode: 'MarkdownV2',
                   reply_markup: {
                     inline_keyboard: [caption.buttons],
                   },
@@ -138,12 +154,11 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
             }
           }
           await t.commit();
-          await ctx.editMessageText(`🏆 Матч сохранен!\n\n${caption}`);
           ctx.session.createEvent = null;
         } catch (ex) {
-          await t.rollback();
-          ctx.reply('Ошибка при рассылке');
           console.log(ex);
+          await t.rollback();
+          ctx.reply('Ошибка при рассылке, матч удален');
         }
 
         return await ctx.scene.leave();
@@ -152,7 +167,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       }
     });
 
-    eventScene.on('text', async (ctx) => {
+    eventScene.on(message(), async (ctx) => {
       const url = ctx.message.text;
       if (url === '/exit') {
         ctx.reply('Вы вышли из режима создания мероприятия');
@@ -207,7 +222,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       }
     });
 
-    eventScene.leave((ctx) => {});
+    eventScene.leave(async (ctx) => {});
 
     return eventScene;
   }
@@ -221,7 +236,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         order: [['date', 'ASC']],
       });
       if (!matchData) {
-        await ctx.reply('Больше не осталось матчей без счета, для выхода введите /exit');
+        await ctx.reply('Больше не осталось матчей без счета');
         ctx.session.currentEvent = undefined;
         return await ctx.scene.leave();
       }
@@ -249,7 +264,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       return await ctx.scene.leave();
     });
 
-    scoreScene.on('text', async (ctx) => {
+    scoreScene.on(message(), async (ctx) => {
       const url = ctx.message.text.trim();
       if (ctx.session.currentEvent === undefined || url === '/exit') {
         ctx.reply('Вы вышли из режима ввода очков');
@@ -289,7 +304,10 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
             ctx.telegram
               .sendMessage(
                 vote.userId,
-                `Вы получили ${reward} очков за матч ${updatedEvent.team1} - ${updatedEvent.team2}\nСчет: ⚽ ${updatedEvent.score[0]} - ${updatedEvent.score[1]}`,
+                `Вы получили ${reward} очков за матч ${updatedEvent.team1} \\- ${updatedEvent.team2}\nСчет: ⚽ ${updatedEvent.score[0]} \\- ${updatedEvent.score[1]}`,
+                {
+                  parse_mode: 'MarkdownV2',
+                },
               )
               .catch((ex) => {
                 console.log(`Unable to deliver message to ${vote.userId}`, ex);
@@ -338,7 +356,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       return await ctx.scene.leave();
     });
 
-    sendngScene.on('text', async (ctx) => {
+    sendngScene.on(message(), async (ctx) => {
       const msg = ctx.message.text;
       if (msg === '/exit') {
         ctx.reply('Вы вышли из режима рассылки');
@@ -355,7 +373,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
             console.log(`Blocked user ${user.userId}`);
           }
         }
-        ctx.replyWithMarkdown(
+        ctx.replyWithMarkdownV2(
           `*Сообщение успешно отправлено ${users.length} пользователям:*\n\n${msg}`,
         );
       } catch (ex) {

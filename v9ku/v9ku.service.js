@@ -1,4 +1,4 @@
-import { V9kuMatch, V9kuMessage, Op } from './v9ku.db.js';
+import { V9kuMatch, V9kuMessage } from './v9ku.db.js';
 import { admins } from '../config.js';
 
 export const scoreButtonsBuilder = (team1, team2, selectedButton = { 1: null, 2: null }) => {
@@ -58,8 +58,8 @@ export const matchCaptionBuilder = (userName, matchData) => {
     ],
     text: `Привет, ${userName}
 
-Матч ${matchData.team1} - ${matchData.team2}
-Состоится ${matchData.date.toLocaleString('ru-RU', timeFormatConfig)} мск.`,
+⚽ Матч ${matchData.team1} \\- ${matchData.team2}
+Состоится ${matchData.date.toLocaleString('ru-RU', timeFormatConfig).replaceAll('.', '\\.')} мск\\.`,
   };
 };
 
@@ -90,6 +90,9 @@ export const extractMessageContext = async (ctx) => {
   const messageData = await V9kuMessage.findOne({
     where: { messageId: ctx.callbackQuery.message.message_id },
   });
+  if (!messageData) {
+    return { messageData: null, matchData: null };
+  }
   const matchData = await V9kuMatch.findOne({
     where: { id: messageData.matchId },
   });
@@ -125,6 +128,7 @@ const commands = {
     { command: 'set_score', description: '[Админ] Завершить матч' },
     { command: 'sending', description: '[Админ] Выполнить рассылку' },
     { command: 'reset_commands', description: '[Админ] Сбросить кнопки' },
+    { command: 'info', description: '[Админ] Техническая информация' },
   ],
   user: [
     { command: 'score', description: 'Мой счет' },

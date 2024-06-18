@@ -4,6 +4,7 @@ config();
 export const app = {
   env: process.env.APP_ENV || 'development',
   port: process.env.APP_PORT || 3000,
+  startup: new Date(),
 };
 
 export const admins = {
@@ -29,4 +30,14 @@ export const credentials = {
   v9ku_token: process.env.TELEGRAM_API_KEY_V9KU,
   forrum_token: process.env.TELEGRAM_API_KEY_FORRUM,
   forrum_admin_token: process.env.TELEGRAM_API_KEY_FORRUM,
+};
+
+export const v9kuConfig = {
+  contact: "@DimaTomchuk",
+  calls: {
+    first: 28,
+    second: 6,
+    third: 3,
+    last: 1,
+  },
 };
