@@ -282,7 +282,9 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
           }]`,
           ex,
         );
-        return await ctx.editMessageText(`Произошла ошибка, обратитесь к администратору ${v9kuConfig.contact}`);
+        return await ctx.reply(
+          `Произошла ошибка, если голос не был зачтен - обратитесь к администратору ${v9kuConfig.contact}`,
+        );
       }
     });
     for (let i = 1; i <= 2; i++) {
@@ -349,11 +351,18 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
       if (voteData && typeof voteData.team1 == 'number' && typeof voteData.team2 == 'number') {
         const caption = votedCaptionBuilder(ctx.from.first_name, matchData, voteData);
 
-        await ctx.editMessageText(caption.text, {
-          reply_markup: {
-            inline_keyboard: [caption.buttons],
-          },
-        });
+        try {
+          await ctx.editMessageText(caption.text, {
+            reply_markup: {
+              inline_keyboard: [caption.buttons],
+            },
+          });
+        } catch (ex) {
+          console.log(
+            `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Юзер нажал ту же кнопку`,
+            ex.message,
+          );
+        }
       }
     });
 

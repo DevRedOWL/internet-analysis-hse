@@ -367,7 +367,10 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         const users = await V9kuUser.findAll({ where: { enabled: true } });
         for (let user of users) {
           try {
-            await ctx.telegram.sendMessage(user.userId, '⚡ Рассылка от администратора\n\n' + msg);
+            await ctx.telegram.sendMessage(
+              user.userId,
+              '⚡ Рассылка от администратора\n\n' + msg.replaceAll('-', '\\-'),
+            );
           } catch (ex) {
             await V9kuUser.update({ enabled: false }, { where: { userId: user.userId } });
             console.log(`Blocked user ${user.userId}`);
