@@ -4,6 +4,7 @@ import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9k
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
 import { message } from 'telegraf/filters';
 import { v9kuConfig } from '../config.js';
+import { escapers } from '@telegraf/entity';
 
 export default class SceneBuilder {
   EventCreateScene() {
@@ -365,11 +366,15 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
 
       try {
         const users = await V9kuUser.findAll({ where: { enabled: true } });
+        const formattedMsg = escapers.MarkdownV2(msg);
         for (let user of users) {
           try {
             await ctx.telegram.sendMessage(
               user.userId,
-              '⚡ Рассылка от администратора\n\n' + msg.replaceAll('-', '\\-'),
+              '> ⚡ Рассылка от администратора\n\n\n' + formattedMsg,
+              {
+                parse_mode: 'MarkdownV2',
+              },
             );
           } catch (ex) {
             await V9kuUser.update({ enabled: false }, { where: { userId: user.userId } });
@@ -377,7 +382,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
           }
         }
         ctx.replyWithMarkdownV2(
-          `*Сообщение успешно отправлено ${users.length} пользователям:*\n\n${msg}`,
+          `*Сообщение успешно отправлено ${users.length} пользователям: *\n\n${formattedMsg}`,
         );
       } catch (ex) {
         ctx.reply('Ошибка при рассылке');

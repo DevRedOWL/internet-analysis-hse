@@ -1,4 +1,4 @@
-import { Sequelize, Model, DataTypes, Op } from 'sequelize';
+import { Sequelize, Model, DataTypes, Op, Transaction } from 'sequelize';
 import { db } from '../config.js';
 
 const { dialect, user, password, host, port, database } = db;
@@ -114,6 +114,14 @@ async function initDB(callback) {
   await sequelize.sync({ alter: true });
   await sequelize.query(
     'CREATE TABLE IF NOT EXISTS postgress_sessions(id varchar PRIMARY KEY, session varchar);',
+  );
+  await sequelize.query(
+    `ALTER TABLE v9ku_votes DROP CONSTRAINT IF EXISTS match_user_unique; 
+    ALTER TABLE v9ku_votes ADD CONSTRAINT match_user_unique UNIQUE ("matchId", "userId")`,
+  );
+  await sequelize.query(
+    `ALTER TABLE v9ku_matches DROP CONSTRAINT IF EXISTS teams_time_unique; 
+    ALTER TABLE v9ku_matches ADD CONSTRAINT teams_time_unique UNIQUE ("team1", "team2", "date")`,
   );
   // try {
   //   await V9kuMatch.create({

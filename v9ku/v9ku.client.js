@@ -1,6 +1,6 @@
 import { Telegraf, Scenes } from 'telegraf';
 import { markdownTable } from 'markdown-table';
-import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote, Op, initDB } from './v9ku.db.js';
+import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote, Op, initDB, sequelize } from './v9ku.db.js';
 import {
   scoreButtonsBuilder,
   matchCaptionBuilder,
@@ -254,7 +254,7 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
       });
     });
 
-    // Прогнозы
+    // Начало прогноза
     bot.action('predict', async (ctx) => {
       try {
         const { matchData } = await extractMessageContext(ctx);
@@ -283,10 +283,12 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
           ex,
         );
         return await ctx.reply(
-          `Произошла ошибка, если голос не был зачтен - обратитесь к администратору ${v9kuConfig.contact}`,
+          `Произошла ошибка (вероятно, вы нажали несколько раз), если меню голосования не появилось - обратитесь к администратору ${v9kuConfig.contact}`,
         );
       }
     });
+
+    // Генерация кнопок со счетом
     for (let i = 1; i <= 2; i++) {
       for (let j = 0; j <= 6; j++) {
         bot.action(`team${i}_${j}`, async (ctx) => {
@@ -297,6 +299,8 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
               { parse_mode: 'MarkdownV2' },
             );
           }
+
+          const t = await sequelize.transaction();
           if (new Date() > new Date(matchData.date.getTime() - 60000)) {
             return await ctx.editMessageText('Время голосования за этот матч вышло');
           }
@@ -305,9 +309,14 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
               matchId: matchData.id,
               userId: ctx.from.id,
             },
+            lock: true,
+            transaction: t,
           });
           const score = j < 6 ? j : -1;
-          await V9kuVote.update({ [`team${i}`]: score }, { where: { id: vote.id } });
+          await V9kuVote.update(
+            { [`team${i}`]: score },
+            { where: { id: vote.id }, transaction: t },
+          );
           try {
             await ctx.editMessageText(
               `Выберите, сколько забъет каждая команда, затем, нажмите "Сохранить прогноз"`,
@@ -320,15 +329,22 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
                 },
               },
             );
+            await t.commit();
           } catch (ex) {
             console.log(
               `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Юзер нажал ту же кнопку`,
               ex.message,
             );
+            return await ctx.reply(
+              `Произошла ошибка (вероятно, вы нажали несколько раз), если голос не был зачтен - обратитесь к администратору ${v9kuConfig.contact}`,
+            );
+            await t.rollback();
           }
         });
       }
     }
+
+    // Подтверждение голоса
     bot.action('confirm_prediction', async (ctx) => {
       const { matchData } = await extractMessageContext(ctx);
       if (!matchData) {
