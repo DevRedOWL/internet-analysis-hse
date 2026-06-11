@@ -7,6 +7,7 @@ import {
   votedCaptionBuilder,
   extractMessageContext,
   buildCommands,
+  isMessageNotModified,
 } from './v9ku.service.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
 import SceneBuilder from './v9ku.scenes.js';
@@ -277,15 +278,16 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
     });
 
     // Начало прогноза
-    bot.action('predict', async (ctx) => {
+    bot.action(/^predict(?:_(\d+))?$/, async (ctx) => {
       try {
         const { matchData } = await extractMessageContext(ctx);
         if (!matchData) {
-          return await ctx.editMessageText(
-            `За данный матч больше нельзя проголосовать, если вы считаете, что это ошибка \\- обратитесь к администратору ${v9kuConfig.contact}\\.\n\nКод ошибки: \`\`\`${ctx.from?.id}\\-${ctx.callbackQuery.message.message_id}\`\`\``,
-            { parse_mode: 'MarkdownV2' },
+          return await ctx.answerCbQuery(
+            'Это сообщение устарело. Найдите более новое от бота или попросите админа отправить напоминание.',
+            { show_alert: true },
           );
         }
+        await ctx.answerCbQuery().catch(() => {});
         if (new Date() > new Date(matchData.date.getTime() - 60000)) {
           return await ctx.editMessageText('Время голосования за этот матч вышло');
         }
@@ -293,11 +295,14 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
           `Выберите, сколько забъет каждая команда, \nзатем, нажмите "Предсказать"\nЕсли выбираете 6+, не забудьте после сохранения\nотправить точный ответ ${v9kuConfig.contact}`,
           {
             reply_markup: {
-              inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2),
+              inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2, matchData.id),
             },
           },
         );
       } catch (ex) {
+        if (isMessageNotModified(ex)) {
+          return;
+        }
         console.log(
           `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Ошибка голосования за матч [${
             ex.message
@@ -310,71 +315,84 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
       }
     });
 
+    bot.action(/^team[12]_caption(?:_\d+)?$/, async (ctx) => {
+      await ctx.answerCbQuery().catch(() => {});
+    });
+
     // Генерация кнопок со счетом
-    for (let i = 1; i <= 2; i++) {
-      for (let j = 0; j <= 6; j++) {
-        bot.action(`team${i}_${j}`, async (ctx) => {
-          const { matchData } = await extractMessageContext(ctx);
-          if (!matchData) {
-            return await ctx.editMessageText(
-              `За данный матч больше нельзя проголосовать, если вы считаете, что это ошибка \\- обратитесь к администратору ${v9kuConfig.contact}\\.\n\nКод ошибки: \`\`\`${ctx.from?.id}\\-${ctx.callbackQuery.message.message_id}\`\`\``,
-              { parse_mode: 'MarkdownV2' },
-            );
-          }
+    bot.action(/^team(\d)_(\d+)(?:_(\d+))?$/, async (ctx) => {
+      const i = Number(ctx.match[1]);
+      const j = Number(ctx.match[2]);
 
-          const t = await sequelize.transaction();
-          if (new Date() > new Date(matchData.date.getTime() - 60000)) {
-            return await ctx.editMessageText('Время голосования за этот матч вышло');
-          }
-          const [vote] = await V9kuVote.findOrCreate({
-            where: {
-              matchId: matchData.id,
-              userId: ctx.from.id,
-            },
-            lock: true,
-            transaction: t,
-          });
-          const score = j < 6 ? j : -1;
-          await V9kuVote.update(
-            { [`team${i}`]: score },
-            { where: { id: vote.id }, transaction: t },
-          );
-          try {
-            await ctx.editMessageText(
-              `Выберите, сколько забъет каждая команда, затем, нажмите "Сохранить прогноз"`,
-              {
-                reply_markup: {
-                  inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2, {
-                    1: i === 1 ? j : vote.team1 >= 0 ? vote.team1 : 6,
-                    2: i === 2 ? j : vote.team2 >= 0 ? vote.team2 : 6,
-                  }),
-                },
-              },
-            );
-            await t.commit();
-          } catch (ex) {
-            console.log(
-              `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Юзер нажал ту же кнопку`,
-              ex.message,
-            );
-            return await ctx.reply(
-              `Произошла ошибка (вероятно, вы нажали несколько раз), если голос не был зачтен - обратитесь к администратору ${v9kuConfig.contact}`,
-            );
-            await t.rollback();
-          }
-        });
-      }
-    }
-
-    // Подтверждение голоса
-    bot.action('confirm_prediction', async (ctx) => {
       const { matchData } = await extractMessageContext(ctx);
       if (!matchData) {
-        return await ctx.editMessageText(
-          `За данный матч больше нельзя проголосовать, если вы считаете, что это ошибка \\- обратитесь к администратору ${v9kuConfig.contact}\\.\n\nКод ошибки: \`\`\`${ctx.from?.id}\\-${ctx.callbackQuery.message.message_id}\`\`\``,
-          { parse_mode: 'MarkdownV2' },
+        return await ctx.answerCbQuery(
+          'Это сообщение устарело. Найдите более новое от бота или попросите админа отправить напоминание.',
+          { show_alert: true },
         );
       }
+      await ctx.answerCbQuery().catch(() => {});
+
+      if (new Date() > new Date(matchData.date.getTime() - 60000)) {
+        return await ctx.editMessageText('Время голосования за этот матч вышло');
+      }
+
+      const t = await sequelize.transaction();
+      try {
+        const [vote] = await V9kuVote.findOrCreate({
+          where: {
+            matchId: matchData.id,
+            userId: ctx.from.id,
+          },
+          lock: true,
+          transaction: t,
+        });
+        const score = j < 6 ? j : -1;
+        await V9kuVote.update({ [`team${i}`]: score }, { where: { id: vote.id }, transaction: t });
+
+        const refreshedVote = await V9kuVote.findOne({
+          where: { id: vote.id },
+          transaction: t,
+        });
+
+        await ctx.editMessageText(
+          `Выберите, сколько забъет каждая команда, затем, нажмите "Сохранить прогноз"`,
+          {
+            reply_markup: {
+              inline_keyboard: scoreButtonsBuilder(matchData.team1, matchData.team2, matchData.id, {
+                1: i === 1 ? j : refreshedVote.team1 >= 0 ? refreshedVote.team1 : 6,
+                2: i === 2 ? j : refreshedVote.team2 >= 0 ? refreshedVote.team2 : 6,
+              }),
+            },
+          },
+        );
+        await t.commit();
+      } catch (ex) {
+        if (isMessageNotModified(ex)) {
+          await t.commit();
+          return;
+        }
+        await t.rollback();
+        console.log(
+          `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Ошибка выбора счета [${ex.message}]`,
+          ex,
+        );
+        return await ctx.reply(
+          `Произошла ошибка (вероятно, вы нажали несколько раз), если голос не был зачтен - обратитесь к администратору ${v9kuConfig.contact}`,
+        );
+      }
+    });
+
+    // Подтверждение голоса
+    bot.action(/^confirm_prediction(?:_(\d+))?$/, async (ctx) => {
+      const { matchData } = await extractMessageContext(ctx);
+      if (!matchData) {
+        return await ctx.answerCbQuery(
+          'Это сообщение устарело. Найдите более новое от бота или попросите админа отправить напоминание.',
+          { show_alert: true },
+        );
+      }
+      await ctx.answerCbQuery().catch(() => {});
       if (
         new Date() > new Date(matchData.date.getTime() - 1000 * 60 * 60 * v9kuConfig.calls.last)
       ) {
@@ -396,6 +414,9 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
             },
           });
         } catch (ex) {
+          if (isMessageNotModified(ex)) {
+            return;
+          }
           console.log(
             `[${new Date().toLocaleString('ru-RU')}] [${this.botName}] Юзер нажал ту же кнопку`,
             ex.message,

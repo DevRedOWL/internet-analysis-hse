@@ -5,6 +5,46 @@ import { markdownTable } from 'markdown-table';
 export const hasCompletedVote = (vote) =>
   vote && typeof vote.team1 === 'number' && typeof vote.team2 === 'number';
 
+export const isMessageNotModified = (error) =>
+  error?.response?.description?.includes('message is not modified') ||
+  error?.message?.includes('message is not modified');
+
+export const isActiveMatch = (matchData) =>
+  matchData && !matchData.score && new Date() < new Date(matchData.date);
+
+const parseMatchIdFromCallback = (data) => {
+  if (!data) {
+    return null;
+  }
+  if (data.startsWith('predict_')) {
+    return Number(data.slice('predict_'.length));
+  }
+  if (data.startsWith('confirm_prediction_')) {
+    return Number(data.slice('confirm_prediction_'.length));
+  }
+  if (data.startsWith('team1_caption_')) {
+    return Number(data.slice('team1_caption_'.length));
+  }
+  if (data.startsWith('team2_caption_')) {
+    return Number(data.slice('team2_caption_'.length));
+  }
+
+  const teamScoreMatch = data.match(/^team[12]_\d+_(\d+)$/);
+  return teamScoreMatch ? Number(teamScoreMatch[1]) : null;
+};
+
+const syncUserMessageRecord = async (userId, matchId, messageId) => {
+  const existing = await V9kuMessage.findOne({ where: { userId, matchId } });
+  if (existing) {
+    if (existing.messageId !== messageId) {
+      await V9kuMessage.update({ messageId }, { where: { id: existing.id } });
+    }
+    return { ...existing, messageId, userId, matchId };
+  }
+
+  return V9kuMessage.create({ messageId, userId, matchId });
+};
+
 export const formatVoteScore = (vote) => {
   if (!hasCompletedVote(vote)) {
     return '—';
@@ -20,6 +60,7 @@ export async function buildMatchVotesReport(matchData) {
 
   const votesByUserId = new Map(votes.map((vote) => [String(vote.userId), vote]));
   const votedRows = [];
+  const partialVoted = [];
   const notVoted = [];
 
   for (const user of enabledUsers) {
@@ -31,6 +72,8 @@ export async function buildMatchVotesReport(matchData) {
         String(vote.team1 >= 0 ? vote.team1 : '6+'),
         String(vote.team2 >= 0 ? vote.team2 : '6+'),
       ]);
+    } else if (vote) {
+      partialVoted.push(user.name || `ID ${user.userId}`);
     } else {
       notVoted.push(user.name || `ID ${user.userId}`);
     }
@@ -51,6 +94,9 @@ export async function buildMatchVotesReport(matchData) {
       : 'Пока никто не проголосовал';
 
   let report = `${header}\n\n\`\`\`\n${table}\n\`\`\``;
+  if (partialVoted.length) {
+    report += `\n\n*Начали, но не завершили \\(${partialVoted.length}\\):*\n\`\`\`\n${partialVoted.join('\n')}\n\`\`\``;
+  }
   if (notVoted.length) {
     report += `\n\n*Не проголосовали \\(${notVoted.length}\\):*\n\`\`\`\n${notVoted.join('\n')}\n\`\`\``;
   }
@@ -87,7 +133,10 @@ export async function sendMatchReminders(telegram, event, { asNew = false } = {}
           },
         });
         if (existingMessage) {
-          await existingMessage.update({ messageId: message.message_id });
+          await V9kuMessage.update(
+            { messageId: message.message_id },
+            { where: { id: existingMessage.id } },
+          );
         } else {
           await V9kuMessage.create({
             messageId: message.message_id,
@@ -115,30 +164,35 @@ export async function sendMatchReminders(telegram, event, { asNew = false } = {}
   return { sent, skipped, failed, total: users.length };
 }
 
-export const scoreButtonsBuilder = (team1, team2, selectedButton = { 1: null, 2: null }) => {
+export const scoreButtonsBuilder = (
+  team1,
+  team2,
+  matchId,
+  selectedButton = { 1: null, 2: null },
+) => {
   const generatedButtons = [
-    [{ text: `${team1}`, callback_data: 'team1_caption' }],
+    [{ text: `${team1}`, callback_data: `team1_caption_${matchId}` }],
     [],
-    [{ text: `${team2}`, callback_data: 'team2_caption' }],
+    [{ text: `${team2}`, callback_data: `team2_caption_${matchId}` }],
     [],
     [
       {
         text: `${
           typeof selectedButton[1] == 'number' && typeof selectedButton[2] == 'number' ? '✅' : '❎'
         } Сохранить прогноз`,
-        callback_data: 'confirm_prediction',
+        callback_data: `confirm_prediction_${matchId}`,
       },
     ],
   ];
   // Generating first row
   for (let i = 0; i <= 6; i++) {
-    const action1Name = `team1_${i}`;
+    const action1Name = `team1_${i}_${matchId}`;
     const actionText = `${i < 6 ? i : '6+'}`;
     generatedButtons[1].push({
       text: selectedButton[1] === i ? `⚽${actionText}` : actionText,
       callback_data: action1Name,
     });
-    const action2Name = `team2_${i}`;
+    const action2Name = `team2_${i}_${matchId}`;
     generatedButtons[3].push({
       text: selectedButton[2] === i ? `⚽${actionText}` : actionText,
       callback_data: action2Name,
@@ -159,7 +213,7 @@ export const timeFormatConfig = {
 export const matchCaptionBuilder = (userName, matchData) => {
   return {
     buttons: [
-      { text: 'Голосовать', callback_data: 'predict' },
+      { text: 'Голосовать', callback_data: `predict_${matchData.id}` },
       matchData.url
         ? {
             text: `Ссылка на матч`,
@@ -201,15 +255,41 @@ export const votedCaptionBuilder = (userName, matchData, voteData) => {
 };
 
 export const extractMessageContext = async (ctx) => {
-  const messageData = await V9kuMessage.findOne({
-    where: { messageId: ctx.callbackQuery.message.message_id },
-  });
-  if (!messageData) {
+  const messageId = ctx.callbackQuery.message.message_id;
+  const userId = ctx.from.id;
+  const callbackMatchId = parseMatchIdFromCallback(ctx.callbackQuery.data);
+
+  let messageData = await V9kuMessage.findOne({ where: { messageId } });
+  let matchId = messageData?.matchId ?? callbackMatchId;
+
+  if (!matchId) {
+    const userMessages = await V9kuMessage.findAll({
+      where: { userId },
+      order: [['id', 'DESC']],
+    });
+    const openMessages = [];
+    for (const userMessage of userMessages) {
+      const match = await V9kuMatch.findOne({ where: { id: userMessage.matchId } });
+      if (isActiveMatch(match)) {
+        openMessages.push(userMessage);
+      }
+    }
+
+    if (openMessages.length === 1) {
+      matchId = openMessages[0].matchId;
+      messageData = await syncUserMessageRecord(userId, matchId, messageId);
+    } else {
+      return { messageData: null, matchData: null };
+    }
+  } else if (!messageData || messageData.messageId !== messageId) {
+    messageData = await syncUserMessageRecord(userId, matchId, messageId);
+  }
+
+  const matchData = await V9kuMatch.findOne({ where: { id: matchId } });
+  if (!matchData) {
     return { messageData: null, matchData: null };
   }
-  const matchData = await V9kuMatch.findOne({
-    where: { id: messageData.matchId },
-  });
+
   return { messageData, matchData };
 };
 
