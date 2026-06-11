@@ -21,17 +21,6 @@ class EventScheduler {
     ).catch((ex) => {
       console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] Event scedule failed`, ex);
     });
-
-    // TEMP: рассылка таблицы при старте, если окно уже наступило — удалить после проверки
-    for (const match of futureMatches) {
-      const tableDate = new Date(match.date.getTime() - v9kuConfig.calls.last * 60 * 60 * 1000);
-      if (tableDate <= new Date()) {
-        console.log(
-          `[${new Date().toLocaleString('ru-RU')}] [V9ku] TEMP startup table for match ${match.id}`,
-        );
-        await this.sendMatchTablePhoto(match);
-      }
-    }
   }
 
   async sendMatchTablePhoto(event) {
