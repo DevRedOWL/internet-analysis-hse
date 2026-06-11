@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import pkg from './package.json' assert { type: 'json' };
+import pkg from './package.json' with { type: 'json' };
 import { existsSync } from 'fs';
 import express from 'express';
 

@@ -6,6 +6,7 @@
   "license": "WTFPL",
   "type": "module",
   "scripts": {
+    "dev": "nodemon -e js",
     "start:watch": "nodemon -e js",
     "start": "node index.js",
     "db:drop": "./node_modules/.bin/sequelize db:drop",
@@ -19,7 +20,7 @@
     "@typescript-eslint/parser": "^5.46.0",
     "axios": "^1.2.0",
     "bullmq": "^3.5.6",
-    "canvas": "^2.10.2",
+    "canvas": "^3.2.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
