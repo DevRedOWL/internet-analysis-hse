@@ -353,6 +353,7 @@ const commands = {
     { command: 'sending', description: '[Админ] Выполнить рассылку' },
     { command: 'remind', description: '[Админ] Напоминание о голосовании' },
     { command: 'votes', description: '[Админ] Прогнозы по матчу' },
+    { command: 'rename', description: '[Админ] Переименовать участника' },
     { command: 'reset_commands', description: '[Админ] Сбросить кнопки' },
     { command: 'info', description: '[Админ] Техническая информация' },
   ],
