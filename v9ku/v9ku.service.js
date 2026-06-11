@@ -1,8 +1,62 @@
 import { V9kuMatch, V9kuMessage, V9kuUser, V9kuVote } from './v9ku.db.js';
 import { admins } from '../config.js';
+import { markdownTable } from 'markdown-table';
 
 export const hasCompletedVote = (vote) =>
   vote && typeof vote.team1 === 'number' && typeof vote.team2 === 'number';
+
+export const formatVoteScore = (vote) => {
+  if (!hasCompletedVote(vote)) {
+    return '—';
+  }
+  return `${vote.team1 >= 0 ? vote.team1 : '6+'} - ${vote.team2 >= 0 ? vote.team2 : '6+'}`;
+};
+
+export async function buildMatchVotesReport(matchData) {
+  const [votes, enabledUsers] = await Promise.all([
+    V9kuVote.findAll({ where: { matchId: matchData.id } }),
+    V9kuUser.findAll({ where: { enabled: true }, order: [['name', 'ASC']] }),
+  ]);
+
+  const votesByUserId = new Map(votes.map((vote) => [String(vote.userId), vote]));
+  const votedRows = [];
+  const notVoted = [];
+
+  for (const user of enabledUsers) {
+    const vote = votesByUserId.get(String(user.userId));
+    if (hasCompletedVote(vote)) {
+      votedRows.push([
+        user.name || `ID ${user.userId}`,
+        formatVoteScore(vote),
+        String(vote.team1 >= 0 ? vote.team1 : '6+'),
+        String(vote.team2 >= 0 ? vote.team2 : '6+'),
+      ]);
+    } else {
+      notVoted.push(user.name || `ID ${user.userId}`);
+    }
+  }
+
+  votedRows.sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+
+  const header = `*Прогнозы:* ${matchData.team1} \\- ${matchData.team2}
+*Дата:* ${matchData.date.toLocaleString('ru-RU', timeFormatConfig).replaceAll('.', '\\.')} мск
+*Проголосовало:* ${votedRows.length}/${enabledUsers.length}`;
+
+  const table =
+    votedRows.length > 0
+      ? markdownTable([['Имя', 'Счёт', matchData.team1, matchData.team2], ...votedRows], {
+          delimiterStart: false,
+          delimiterEnd: false,
+        })
+      : 'Пока никто не проголосовал';
+
+  let report = `${header}\n\n\`\`\`\n${table}\n\`\`\``;
+  if (notVoted.length) {
+    report += `\n\n*Не проголосовали \\(${notVoted.length}\\):*\n\`\`\`\n${notVoted.join('\n')}\n\`\`\``;
+  }
+
+  return report;
+}
 
 export async function sendMatchReminders(telegram, event, { asNew = false } = {}) {
   const users = await V9kuUser.findAll({ where: { enabled: true } });
@@ -188,6 +242,7 @@ const commands = {
     { command: 'set_score', description: '[Админ] Завершить матч' },
     { command: 'sending', description: '[Админ] Выполнить рассылку' },
     { command: 'remind', description: '[Админ] Напоминание о голосовании' },
+    { command: 'votes', description: '[Админ] Прогнозы по матчу' },
     { command: 'reset_commands', description: '[Админ] Сбросить кнопки' },
     { command: 'info', description: '[Админ] Техническая информация' },
   ],

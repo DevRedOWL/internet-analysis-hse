@@ -4,6 +4,7 @@ import {
   countReward,
   matchCaptionBuilder,
   sendMatchReminders,
+  buildMatchVotesReport,
 } from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
@@ -474,5 +475,67 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
     remindScene.leave((ctx) => {});
 
     return remindScene;
+  }
+
+  VotesScene() {
+    const votesScene = new Scenes.BaseScene('votes');
+
+    votesScene.enter(async (ctx) => {
+      const matches = await V9kuMatch.findAll({
+        where: {
+          score: null,
+          date: {
+            [Op.gt]: new Date(Date.now() - v9kuConfig.calls.last * 60 * 60 * 1000),
+          },
+        },
+        order: [['date', 'ASC']],
+      });
+
+      if (!matches.length) {
+        await ctx.reply('Нет матчей для просмотра прогнозов');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply('Выберите матч для просмотра прогнозов:', {
+        reply_markup: {
+          inline_keyboard: [
+            ...matches.map((match) => [
+              {
+                text: `${match.team1} - ${match.team2} (${match.date.toLocaleString(
+                  'ru-RU',
+                  timeFormatConfig,
+                )})`,
+                callback_data: `VOTES_${match.id}`,
+              },
+            ]),
+            [{ text: 'Вернуться в меню', callback_data: 'EXIT_MENU' }],
+          ],
+        },
+      });
+    });
+
+    votesScene.action('EXIT_MENU', async (ctx) => {
+      await ctx.reply('Вы вышли из просмотра прогнозов');
+      return await ctx.scene.leave();
+    });
+
+    votesScene.action(/^VOTES_(\d+)$/, async (ctx) => {
+      const matchId = Number(ctx.match[1]);
+      const matchData = await V9kuMatch.findOne({ where: { id: matchId } });
+
+      if (!matchData) {
+        await ctx.reply('Матч не найден');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.answerCbQuery();
+      const report = await buildMatchVotesReport(matchData);
+      await ctx.replyWithMarkdownV2(report);
+      return await ctx.scene.leave();
+    });
+
+    votesScene.leave((ctx) => {});
+
+    return votesScene;
   }
 }
