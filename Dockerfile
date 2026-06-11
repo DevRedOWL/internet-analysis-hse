@@ -1,21 +1,21 @@
-FROM node:16 as builder
+FROM node:20-bookworm-slim
 
-# Set work directory
 WORKDIR /app
 COPY . /app
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2-dev \
     libpango1.0-dev \
     libjpeg-dev \
     libgif-dev \
-    librsvg2-dev
+    librsvg2-dev \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package.json yarn.lock .env /app/
 
-RUN yarn
-RUN yarn install --ignore-scripts --frozen-lockfile
+RUN yarn install --frozen-lockfile
 
-# HEALTHCHECK CMD curl --fail http://localhost:3000 || exit 1
-
-CMD ["yarn","start"]
+CMD ["yarn", "start"]
