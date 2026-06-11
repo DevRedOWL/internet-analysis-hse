@@ -5,6 +5,7 @@ import {
   matchCaptionBuilder,
   sendMatchReminders,
   buildMatchVotesReport,
+  buildRenameUsersTable,
 } from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
@@ -537,5 +538,100 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
     votesScene.leave((ctx) => {});
 
     return votesScene;
+  }
+
+  RenameScene() {
+    const renameScene = new Scenes.BaseScene('rename');
+
+    const showUsersList = async (ctx) => {
+      const users = await V9kuUser.findAll({ order: [['id', 'ASC']] });
+      if (!users.length) {
+        await ctx.reply('Нет зарегистрированных пользователей');
+        return false;
+      }
+
+      const table = buildRenameUsersTable(users);
+      await ctx.reply(
+        `*Переименование участника*\n\n\`\`\`\n${table}\n\`\`\`\n\nВведите id из таблицы или нажмите «Назад»`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Назад', callback_data: 'EXIT_MENU' }]],
+          },
+        },
+      );
+      return true;
+    };
+
+    renameScene.enter(async (ctx) => {
+      ctx.session.rename = { step: 'pick' };
+      const hasUsers = await showUsersList(ctx);
+      if (!hasUsers) {
+        return await ctx.scene.leave();
+      }
+    });
+
+    renameScene.action('EXIT_MENU', async (ctx) => {
+      ctx.session.rename = null;
+      await ctx.reply('Вы вышли из переименования');
+      return await ctx.scene.leave();
+    });
+
+    renameScene.on(message(), async (ctx) => {
+      const text = ctx.message.text.trim();
+
+      if (text === '/exit') {
+        ctx.session.rename = null;
+        await ctx.reply('Вы вышли из переименования');
+        return await ctx.scene.leave();
+      }
+
+      if (!ctx.session.rename || ctx.session.rename.step === 'pick') {
+        const userId = Number(text);
+        if (!Number.isInteger(userId) || userId <= 0) {
+          await ctx.reply('Введите id из таблицы (целое число) или нажмите «Назад»');
+          return;
+        }
+
+        const user = await V9kuUser.findOne({ where: { id: userId } });
+        if (!user) {
+          await ctx.reply('Участник с таким id не найден. Введите id из таблицы или нажмите «Назад»');
+          return;
+        }
+
+        const currentLabel = user.name?.trim() || user.phone || `TG ${user.userId}`;
+        ctx.session.rename = { step: 'name', userId: user.id };
+        await ctx.reply(
+          `Участник: ${currentLabel}\nТекущее имя: ${user.name?.trim() || 'не задано'}\n\nВведите новое имя или /exit`,
+        );
+        return;
+      }
+
+      if (!text) {
+        await ctx.reply('Имя не может быть пустым. Введите новое имя или /exit');
+        return;
+      }
+
+      const [affectedCount] = await V9kuUser.update(
+        { name: text },
+        { where: { id: ctx.session.rename.userId } },
+      );
+
+      if (!affectedCount) {
+        await ctx.reply('Не удалось обновить имя');
+        ctx.session.rename = null;
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply(`Имя обновлено: ${text}`);
+      ctx.session.rename = null;
+      return await ctx.scene.leave();
+    });
+
+    renameScene.leave((ctx) => {
+      ctx.session.rename = null;
+    });
+
+    return renameScene;
   }
 }

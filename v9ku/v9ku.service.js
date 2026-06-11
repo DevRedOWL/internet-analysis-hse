@@ -104,6 +104,33 @@ export async function buildMatchVotesReport(matchData) {
   return report;
 }
 
+export function buildRenameUsersTable(users) {
+  const rows = users.map((user) => [
+    String(user.id),
+    user.name?.trim() || '—',
+    user.phone || '—',
+    String(user.userId),
+  ]);
+
+  return markdownTable([['ID', 'Имя', 'Телефон', 'TG ID'], ...rows], {
+    delimiterStart: false,
+    delimiterEnd: false,
+  });
+}
+
+const removeMessageButtons = async (telegram, chatId, messageId) => {
+  try {
+    await telegram.editMessageReplyMarkup(chatId, messageId, undefined, {
+      inline_keyboard: [],
+    });
+  } catch (ex) {
+    console.log(
+      `[${new Date().toLocaleString('ru-RU')}] [V9ku] Failed to remove buttons from message ${messageId}`,
+      ex.message,
+    );
+  }
+};
+
 export async function sendMatchReminders(telegram, event, { asNew = false } = {}) {
   const users = await V9kuUser.findAll({ where: { enabled: true } });
   let sent = 0;

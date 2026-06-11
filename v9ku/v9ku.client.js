@@ -47,12 +47,14 @@ export class V9kuClient {
     const sendingScene = new SceneBuilder().SendingScene();
     const remindScene = new SceneBuilder().RemindScene();
     const votesScene = new SceneBuilder().VotesScene();
+    const renameScene = new SceneBuilder().RenameScene();
     const stage = new Scenes.Stage([
       createEventScene,
       setScoreScene,
       sendingScene,
       remindScene,
       votesScene,
+      renameScene,
     ]);
     bot.use(stage.middleware());
     bot.command('create_match', async (ctx) => {
@@ -86,6 +88,13 @@ export class V9kuClient {
     bot.command('votes', async (ctx) => {
       if (admins.list.indexOf(ctx.from.id) !== -1) {
         ctx.scene.enter('votes');
+      } else {
+        ctx.reply(admins.error_message);
+      }
+    });
+    bot.command('rename', async (ctx) => {
+      if (admins.list.indexOf(ctx.from.id) !== -1) {
+        ctx.scene.enter('rename');
       } else {
         ctx.reply(admins.error_message);
       }
