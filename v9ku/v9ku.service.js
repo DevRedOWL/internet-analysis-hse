@@ -1,6 +1,9 @@
 import { V9kuMatch, V9kuMessage, V9kuUser, V9kuVote } from './v9ku.db.js';
 import { admins } from '../config.js';
 import { markdownTable } from 'markdown-table';
+import { escapers } from '@telegraf/entity';
+
+const md = (text) => escapers.MarkdownV2(String(text ?? ''));
 
 export const hasCompletedVote = (vote) =>
   vote && typeof vote.team1 === 'number' && typeof vote.team2 === 'number';
@@ -81,7 +84,7 @@ export async function buildMatchVotesReport(matchData) {
 
   votedRows.sort((a, b) => a[0].localeCompare(b[0], 'ru'));
 
-  const header = `*Прогнозы:* ${matchData.team1} \\- ${matchData.team2}
+  const header = `*Прогнозы:* ${md(matchData.team1)} \\- ${md(matchData.team2)}
 *Дата:* ${matchData.date.toLocaleString('ru-RU', timeFormatConfig).replaceAll('.', '\\.')} мск
 *Проголосовало:* ${votedRows.length}/${enabledUsers.length}`;
 
@@ -251,9 +254,9 @@ export const matchCaptionBuilder = (userName, matchData) => {
             url: 'tg://resolve?domain=V9KU_bot',
           },
     ],
-    text: `Привет, ${userName}
+    text: `Привет, ${md(userName)}
 
-⚽ Матч ${matchData.team1} \\- ${matchData.team2}
+⚽ Матч ${md(matchData.team1)} \\- ${md(matchData.team2)}
 Состоится ${matchData.date.toLocaleString('ru-RU', timeFormatConfig).replaceAll('.', '\\.')} мск\\.`,
   };
 };
