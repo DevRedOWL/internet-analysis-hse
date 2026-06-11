@@ -1,45 +1,48 @@
 import { V9kuMatch, Op, V9kuVote, V9kuUser } from './v9ku.db.js';
-import { timeFormatConfig } from './v9ku.service.js';
-import TableRenderer, { saveImage } from 'table-renderer';
+import { formatVoteScore, hasCompletedVote, timeFormatConfig } from './v9ku.service.js';
+import { saveImage } from 'table-renderer';
+import { createCanvas } from 'canvas';
+import { renderTable, measureColumnTitleWidth } from './v9ku.tableCanvas.js';
 import path from 'path';
 import fs from 'fs';
-import _ from 'lodash';
-const renderTable = TableRenderer.default().render;
+
+const measureCtx = createCanvas(1, 1).getContext('2d');
+measureCtx.font = 'normal 16px "Noto Sans", Helvetica, Arial, sans-serif';
 
 export class V9kuTableRenderer {
   static async renderMatch(match) {
-    const teamTexts = [
-      match.team1.replace(/[^a-zа-я0-9 \-]/gi, ''),
-      match.team2.replace(/[^a-zа-я0-9 \-]/gi, ''),
-    ];
+    const matchTitle = `${match.team1} – ${match.team2}`;
+    const matchColumnWidth = await measureColumnTitleWidth(measureCtx, matchTitle, 120);
     const table = {
       title: `Результаты на ${match.date.getDate()}.${match.date.getMonth() + 1}`,
       columns: [
         { width: 350, title: 'Участник', dataIndex: 'name' },
         {
-          title: `${teamTexts[0]} – ${teamTexts[1]}`,
+          title: matchTitle,
           dataIndex: `${match.id}`,
-          width: 5.5 * `${teamTexts[0]} – ${teamTexts[1]}`.length,
+          width: matchColumnWidth,
           align: 'center',
         },
       ],
-      dataSource: [,],
+      dataSource: [],
     };
     const votes = await V9kuVote.findAll({ where: { matchId: match.id } });
     for (let vote of votes) {
+      if (!hasCompletedVote(vote)) {
+        continue;
+      }
       const user = await V9kuUser.findOne({ where: { userId: vote.userId } });
-      table.dataSource.push({ [match.id]: `${vote.team1} – ${vote.team2}`, name: user.name });
-      // console.log(vote); FIXME: Выводим голоса
+      if (!user) {
+        continue;
+      }
+      table.dataSource.push({ [match.id]: formatVoteScore(vote), name: user.name });
     }
     const dir = './results/';
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     const result = path.join(dir, `match_${match.id}.png`);
-    saveImage(
-      renderTable(table),
-      result, //
-    );
+    await saveImage(await renderTable(table), result);
     return result;
   }
 
@@ -68,14 +71,12 @@ export class V9kuTableRenderer {
       ],
     };
     for (let match of matchesForDay) {
-      const teamTexts = [
-        match.team1.replace(/[^a-zа-я0-9 ]/gi, ''),
-        match.team2.replace(/[^a-zа-я0-9 ]/gi, ''),
-      ];
+      const matchTitle = `${match.team1} – ${match.team2}`;
+      const matchColumnWidth = await measureColumnTitleWidth(measureCtx, matchTitle, 120);
       table.columns.push({
-        title: `${teamTexts[0]} – ${teamTexts[1]}`,
+        title: matchTitle,
         dataIndex: `${match.id}`,
-        width: 11 * `${teamTexts[0]} – ${teamTexts[1]}`.length,
+        width: matchColumnWidth,
         align: 'center',
       });
       const votes = await V9kuVote.findAll({ where: { matchId: match.id } });
@@ -88,8 +89,8 @@ export class V9kuTableRenderer {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    saveImage(
-      renderTable(table),
+    await saveImage(
+      await renderTable(table),
       path.join(dir, `summary_${start.toLocaleDateString('ru-RU')}.png`),
     );
 

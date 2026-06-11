@@ -9,9 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
     libgif-dev \
     librsvg2-dev \
+    fontconfig \
+    fonts-noto-core \
     python3 \
     make \
     g++ \
+    && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json yarn.lock .env /app/

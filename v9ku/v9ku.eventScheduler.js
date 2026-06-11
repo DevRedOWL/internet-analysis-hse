@@ -21,6 +21,32 @@ class EventScheduler {
     ).catch((ex) => {
       console.log(`[${new Date().toLocaleString('ru-RU')}] [V9ku] Event scedule failed`, ex);
     });
+
+    // TEMP: рассылка таблицы при старте, если окно уже наступило — удалить после проверки
+    for (const match of futureMatches) {
+      const tableDate = new Date(match.date.getTime() - v9kuConfig.calls.last * 60 * 60 * 1000);
+      if (tableDate <= new Date()) {
+        console.log(
+          `[${new Date().toLocaleString('ru-RU')}] [V9ku] TEMP startup table for match ${match.id}`,
+        );
+        await this.sendMatchTablePhoto(match);
+      }
+    }
+  }
+
+  async sendMatchTablePhoto(event) {
+    const matchPhoto = await V9kuTableRenderer.renderMatch(event);
+    const users = await V9kuUser.findAll({ where: { enabled: true } });
+    for (let user of users) {
+      try {
+        await this.telegram.sendPhoto(user.userId, { source: matchPhoto });
+      } catch (ex) {
+        console.log(
+          `[${new Date().toLocaleString('ru-RU')}] [V9ku] Failed to send match table`,
+          ex.message,
+        );
+      }
+    }
   }
 
   async scheduleEvents(event) {
@@ -46,18 +72,7 @@ class EventScheduler {
       console.log(
         `[${new Date().toLocaleString('ru-RU')}] [V9ku] Photo sending for match ${event.id}`,
       );
-      const matchPhoto = await V9kuTableRenderer.renderMatch(event);
-      const users = await V9kuUser.findAll({ where: { enabled: true } });
-      for (let user of users) {
-        try {
-          await this.telegram.sendPhoto(user.userId, { source: matchPhoto });
-        } catch (ex) {
-          console.log(
-            `[${new Date().toLocaleString('ru-RU')}] [V9ku] Failed to send match table`,
-            ex.message,
-          );
-        }
-      }
+      await this.sendMatchTablePhoto(event);
     });
     console.log(
       `[${new Date().toLocaleString('ru-RU')}] [V9ku] Events scheduled for match ${event.team1} - ${
