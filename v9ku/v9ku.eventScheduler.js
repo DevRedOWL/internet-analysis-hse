@@ -1,6 +1,6 @@
 import scheduler from 'node-schedule';
-import { V9kuMatch, V9kuUser, V9kuMessage, Op, V9kuVote } from './v9ku.db.js';
-import { matchCaptionBuilder } from './v9ku.service.js';
+import { V9kuMatch, V9kuUser, Op } from './v9ku.db.js';
+import { sendMatchReminders } from './v9ku.service.js';
 import { V9kuTableRenderer } from './v9ku.table.js';
 import { v9kuConfig } from '../config.js';
 
@@ -36,45 +36,7 @@ class EventScheduler {
           console.log(
             `[${new Date().toLocaleString('ru-RU')}] [V9ku] Reminder sending for match ${event.id}`,
           );
-          const users = await V9kuUser.findAll({ where: { enabled: true } });
-          for (let user of users) {
-            try {
-              const existingMessage = await V9kuMessage.findOne({
-                where: { userId: user.userId, matchId: event.id },
-              });
-              // Если сообщение уже существует и нет голоса, отправляем реплай
-              if (existingMessage) {
-                const existingVote = await V9kuVote.findOne({
-                  where: { userId: user.userId, matchId: event.id },
-                });
-                if (!existingVote) {
-                  this.telegram.sendMessage(
-                    user.userId,
-                    `Не забудьте сделать прогноз на матч ${event.team1} - ${event.team2}`,
-                    { reply_to_message_id: existingMessage.messageId },
-                  );
-                }
-              } else {
-                const caption = matchCaptionBuilder(user.name, event);
-                const message = await this.telegram.sendMessage(user.userId, caption.text, {
-                  parse_mode: 'MarkdownV2',
-                  reply_markup: {
-                    inline_keyboard: [caption.buttons],
-                  },
-                });
-                await V9kuMessage.create({
-                  messageId: message.message_id,
-                  userId: user.userId,
-                  matchId: event.id,
-                });
-              }
-            } catch (ex) {
-              console.log(
-                `[${new Date().toLocaleString('ru-RU')}] [V9ku] Failed to notify user`,
-                ex.message,
-              );
-            }
-          }
+          await sendMatchReminders(this.telegram, event);
         });
       }
     }

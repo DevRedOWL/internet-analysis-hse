@@ -1,5 +1,65 @@
-import { V9kuMatch, V9kuMessage } from './v9ku.db.js';
+import { V9kuMatch, V9kuMessage, V9kuUser, V9kuVote } from './v9ku.db.js';
 import { admins } from '../config.js';
+
+export const hasCompletedVote = (vote) =>
+  vote && typeof vote.team1 === 'number' && typeof vote.team2 === 'number';
+
+export async function sendMatchReminders(telegram, event, { asNew = false } = {}) {
+  const users = await V9kuUser.findAll({ where: { enabled: true } });
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const user of users) {
+    try {
+      const existingVote = await V9kuVote.findOne({
+        where: { userId: user.userId, matchId: event.id },
+      });
+      if (hasCompletedVote(existingVote)) {
+        skipped++;
+        continue;
+      }
+
+      const existingMessage = await V9kuMessage.findOne({
+        where: { userId: user.userId, matchId: event.id },
+      });
+
+      if (asNew || !existingMessage) {
+        const caption = matchCaptionBuilder(user.name, event);
+        const message = await telegram.sendMessage(user.userId, caption.text, {
+          parse_mode: 'MarkdownV2',
+          reply_markup: {
+            inline_keyboard: [caption.buttons],
+          },
+        });
+        if (existingMessage) {
+          await existingMessage.update({ messageId: message.message_id });
+        } else {
+          await V9kuMessage.create({
+            messageId: message.message_id,
+            userId: user.userId,
+            matchId: event.id,
+          });
+        }
+      } else {
+        await telegram.sendMessage(
+          user.userId,
+          `Не забудьте сделать прогноз на матч ${event.team1} - ${event.team2}`,
+          { reply_to_message_id: existingMessage.messageId },
+        );
+      }
+      sent++;
+    } catch (ex) {
+      failed++;
+      console.log(
+        `[${new Date().toLocaleString('ru-RU')}] [V9ku] Failed to notify user ${user.userId}`,
+        ex.message,
+      );
+    }
+  }
+
+  return { sent, skipped, failed, total: users.length };
+}
 
 export const scoreButtonsBuilder = (team1, team2, selectedButton = { 1: null, 2: null }) => {
   const generatedButtons = [
@@ -127,6 +187,7 @@ const commands = {
     { command: 'create_match', description: '[Админ] Создать матч' },
     { command: 'set_score', description: '[Админ] Завершить матч' },
     { command: 'sending', description: '[Админ] Выполнить рассылку' },
+    { command: 'remind', description: '[Админ] Напоминание о голосовании' },
     { command: 'reset_commands', description: '[Админ] Сбросить кнопки' },
     { command: 'info', description: '[Админ] Техническая информация' },
   ],

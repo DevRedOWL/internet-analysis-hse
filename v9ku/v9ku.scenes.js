@@ -1,5 +1,10 @@
 import { Scenes } from 'telegraf';
-import { timeFormatConfig, countReward, matchCaptionBuilder } from './v9ku.service.js';
+import {
+  timeFormatConfig,
+  countReward,
+  matchCaptionBuilder,
+  sendMatchReminders,
+} from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
 import { message } from 'telegraf/filters';
@@ -394,5 +399,80 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
     sendngScene.leave((ctx) => {});
 
     return sendngScene;
+  }
+
+  RemindScene() {
+    const remindScene = new Scenes.BaseScene('remind');
+
+    remindScene.enter(async (ctx) => {
+      const matches = await V9kuMatch.findAll({
+        where: {
+          score: null,
+          date: {
+            [Op.gt]: new Date(Date.now() - v9kuConfig.calls.last * 60 * 60 * 1000),
+          },
+        },
+        order: [['date', 'ASC']],
+      });
+
+      if (!matches.length) {
+        await ctx.reply('Нет активных матчей для напоминания');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply('Выберите матч для рассылки напоминаний:', {
+        reply_markup: {
+          inline_keyboard: [
+            ...matches.map((match) => [
+              {
+                text: `${match.team1} - ${match.team2} (${match.date.toLocaleString(
+                  'ru-RU',
+                  timeFormatConfig,
+                )})`,
+                callback_data: `REMIND_${match.id}`,
+              },
+            ]),
+            [{ text: 'Вернуться в меню', callback_data: 'EXIT_MENU' }],
+          ],
+        },
+      });
+    });
+
+    remindScene.action('EXIT_MENU', async (ctx) => {
+      await ctx.reply('Вы вышли из режима напоминаний');
+      return await ctx.scene.leave();
+    });
+
+    remindScene.action(/^REMIND_(\d+)$/, async (ctx) => {
+      const matchId = Number(ctx.match[1]);
+      const matchData = await V9kuMatch.findOne({ where: { id: matchId } });
+
+      if (!matchData) {
+        await ctx.reply('Матч не найден');
+        return await ctx.scene.leave();
+      }
+
+      if (
+        new Date() > new Date(matchData.date.getTime() - v9kuConfig.calls.last * 60 * 60 * 1000)
+      ) {
+        await ctx.reply('Время голосования за этот матч уже вышло');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.answerCbQuery('Рассылка запущена...');
+      const { sent, skipped, failed } = await sendMatchReminders(ctx.telegram, matchData, {
+        asNew: true,
+      });
+
+      await ctx.reply(
+        `Напоминания по матчу ${matchData.team1} - ${matchData.team2} отправлены.\n` +
+          `Отправлено: ${sent}\nПропущено (уже проголосовали): ${skipped}\nОшибок: ${failed}`,
+      );
+      return await ctx.scene.leave();
+    });
+
+    remindScene.leave((ctx) => {});
+
+    return remindScene;
   }
 }

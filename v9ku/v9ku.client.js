@@ -44,7 +44,8 @@ export class V9kuClient {
     const createEventScene = new SceneBuilder().EventCreateScene();
     const setScoreScene = new SceneBuilder().ScoreSetScene();
     const sendingScene = new SceneBuilder().SendingScene();
-    const stage = new Scenes.Stage([createEventScene, setScoreScene, sendingScene]);
+    const remindScene = new SceneBuilder().RemindScene();
+    const stage = new Scenes.Stage([createEventScene, setScoreScene, sendingScene, remindScene]);
     bot.use(stage.middleware());
     bot.command('create_match', async (ctx) => {
       if (admins.list.indexOf(ctx.from.id) !== -1) {
@@ -63,6 +64,13 @@ export class V9kuClient {
     bot.command('sending', async (ctx) => {
       if (admins.list.indexOf(ctx.from.id) !== -1) {
         ctx.scene.enter('sending');
+      } else {
+        ctx.reply(admins.error_message);
+      }
+    });
+    bot.command('remind', async (ctx) => {
+      if (admins.list.indexOf(ctx.from.id) !== -1) {
+        ctx.scene.enter('remind');
       } else {
         ctx.reply(admins.error_message);
       }
