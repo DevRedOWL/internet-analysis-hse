@@ -126,6 +126,18 @@ export function buildBumpUsersTable(users) {
   });
 }
 
+export function buildBumpScoreNotification(amount, newScore) {
+  const scoreLabel = md(String(newScore));
+  if (amount > 0) {
+    return `Вам начислено *\\+${md(String(amount))}* очк\\.\nНовый счёт: *${scoreLabel}*`;
+  }
+  return `С вас списано *${md(String(Math.abs(amount)))}* очк\\.\nНовый счёт: *${scoreLabel}*`;
+}
+
+export function buildBumpPerfectNotification(newPerfect) {
+  return `Вам засчитан точный прогноз\\.\nВсего точных: *${md(String(newPerfect))}*`;
+}
+
 export function buildRatingList(users) {
   if (!users.length) {
     return '*Турнирная таблица*\n\nПока никто не участвует';

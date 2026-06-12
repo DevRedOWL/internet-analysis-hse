@@ -8,6 +8,8 @@ import {
   buildMatchVotesReport,
   buildRenameUsersTable,
   buildBumpUsersTable,
+  buildBumpScoreNotification,
+  buildBumpPerfectNotification,
 } from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
@@ -718,6 +720,13 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         }
 
         const user = await V9kuUser.findOne({ where: { id: ctx.session.bump.userId } });
+        ctx.telegram
+          .sendMessage(user.userId, buildBumpPerfectNotification(user.perfect), {
+            parse_mode: 'MarkdownV2',
+          })
+          .catch((ex) => {
+            console.log(`Unable to deliver bump notification to ${user.userId}`, ex);
+          });
         await ctx.reply(`Добавлено точное угадание (+1)\nВсего точных: ${user.perfect}`);
         ctx.session.bump = null;
         return await ctx.scene.leave();
@@ -741,6 +750,13 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       }
 
       const user = await V9kuUser.findOne({ where: { id: ctx.session.bump.userId } });
+      ctx.telegram
+        .sendMessage(user.userId, buildBumpScoreNotification(amount, user.score), {
+          parse_mode: 'MarkdownV2',
+        })
+        .catch((ex) => {
+          console.log(`Unable to deliver bump notification to ${user.userId}`, ex);
+        });
       const sign = amount > 0 ? '+' : '';
       await ctx.reply(`Очки обновлены: ${sign}${amount}\nНовый счёт: ${user.score}`);
       ctx.session.bump = null;
