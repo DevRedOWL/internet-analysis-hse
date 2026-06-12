@@ -700,14 +700,32 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         const currentLabel = user.name?.trim() || user.phone || `TG ${user.userId}`;
         ctx.session.bump = { step: 'amount', userId: user.id };
         await ctx.reply(
-          `Участник: ${currentLabel}\nТекущие очки: ${user.score}\n\nВведите количество очков (например 2 или -2) или /exit`,
+          `Участник: ${currentLabel}\nТекущие очки: ${user.score}, точных: ${user.perfect}\n\nВведите очки (2, -2), «гол» для +1 точного или /exit`,
         );
         return;
       }
 
+      if (text.toLowerCase() === 'гол') {
+        const [affectedCount] = await V9kuUser.update(
+          { perfect: sequelize.literal('perfect + 1') },
+          { where: { id: ctx.session.bump.userId } },
+        );
+
+        if (!affectedCount) {
+          await ctx.reply('Не удалось обновить точные прогнозы');
+          ctx.session.bump = null;
+          return await ctx.scene.leave();
+        }
+
+        const user = await V9kuUser.findOne({ where: { id: ctx.session.bump.userId } });
+        await ctx.reply(`Добавлено точное угадание (+1)\nВсего точных: ${user.perfect}`);
+        ctx.session.bump = null;
+        return await ctx.scene.leave();
+      }
+
       const amount = Number(text);
       if (!Number.isFinite(amount) || amount === 0) {
-        await ctx.reply('Введите ненулевое число (например 2 или -2) или /exit');
+        await ctx.reply('Введите ненулевое число (2, -2), «гол» или /exit');
         return;
       }
 

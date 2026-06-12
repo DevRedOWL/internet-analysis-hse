@@ -117,11 +117,12 @@ export function buildBumpUsersTable(users) {
     String(user.id),
     user.name?.trim() || '—',
     String(user.score),
+    String(user.perfect),
     String(user.userId),
   ]);
 
-  return markdownTable([['ID', 'Имя', 'Очки', 'TG ID'], ...rows], {
-    align: ['r', 'l', 'r', 'r'],
+  return markdownTable([['ID', 'Имя', 'Очки', 'Точных', 'TG ID'], ...rows], {
+    align: ['r', 'l', 'r', 'r', 'r'],
   });
 }
 
@@ -441,7 +442,7 @@ const commands = {
     { command: 'remind', description: '[Админ] Напоминание о голосовании' },
     { command: 'votes', description: '[Админ] Прогнозы по матчу' },
     { command: 'rename', description: '[Админ] Переименовать участника' },
-    { command: 'bump', description: '[Админ] Добавить очки участнику' },
+    { command: 'bump', description: '[Админ] Очки / точный прогноз' },
     { command: 'reset_commands', description: '[Админ] Сбросить кнопки' },
     { command: 'info', description: '[Админ] Техническая информация' },
   ],
