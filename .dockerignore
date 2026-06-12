@@ -1,0 +1,7 @@
+node_modules
+.git
+.github
+*.md
+yarn-error.log
+results
+db.sql
