@@ -69,12 +69,7 @@ export async function buildMatchVotesReport(matchData) {
   for (const user of enabledUsers) {
     const vote = votesByUserId.get(String(user.userId));
     if (hasCompletedVote(vote)) {
-      votedRows.push([
-        user.name || `ID ${user.userId}`,
-        formatVoteScore(vote),
-        String(vote.team1 >= 0 ? vote.team1 : '6+'),
-        String(vote.team2 >= 0 ? vote.team2 : '6+'),
-      ]);
+      votedRows.push([user.name || `ID ${user.userId}`, formatVoteScore(vote)]);
     } else if (vote) {
       partialVoted.push(user.name || `ID ${user.userId}`);
     } else {
@@ -90,10 +85,7 @@ export async function buildMatchVotesReport(matchData) {
 
   const table =
     votedRows.length > 0
-      ? markdownTable([['Имя', 'Счёт', matchData.team1, matchData.team2], ...votedRows], {
-          delimiterStart: false,
-          delimiterEnd: false,
-        })
+      ? markdownTable([['Имя', 'Счёт'], ...votedRows], { align: ['l', 'c'] })
       : 'Пока никто не проголосовал';
 
   let report = `${header}\n\n\`\`\`\n${table}\n\`\`\``;
@@ -116,9 +108,41 @@ export function buildRenameUsersTable(users) {
   ]);
 
   return markdownTable([['ID', 'Имя', 'Телефон', 'TG ID'], ...rows], {
-    delimiterStart: false,
-    delimiterEnd: false,
+    align: ['r', 'l', 'l', 'r'],
   });
+}
+
+export function buildRatingList(users) {
+  if (!users.length) {
+    return '*Турнирная таблица*\n\nПока никто не участвует';
+  }
+
+  const lines = users.map((user, idx) => {
+    const place = idx + 1;
+    const name = md(user.name);
+    const stats = `${user.score} очк\\. · ${user.perfect} точных`;
+
+    if (place === 1) {
+      return `🥇 *${name}* — ${stats}`;
+    }
+    if (place === 2) {
+      return `🥈 *${name}* — ${stats}`;
+    }
+    if (place === 3) {
+      return `🥉 *${name}* — ${stats}`;
+    }
+    return `${place}\\. *${name}* — ${stats}`;
+  });
+
+  return `*Турнирная таблица*\n\n${lines.join('\n')}`;
+}
+
+export function buildScoreReport(user, place) {
+  return `*Ваши результаты*
+
+Общий счёт: *${user.score}*
+Точных прогнозов: *${user.perfect}*
+Место в рейтинге: *${place}*`;
 }
 
 const removeMessageButtons = async (telegram, chatId, messageId) => {

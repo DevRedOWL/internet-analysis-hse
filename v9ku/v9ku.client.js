@@ -1,5 +1,4 @@
 import { Telegraf, Scenes } from 'telegraf';
-import { markdownTable } from 'markdown-table';
 import { V9kuUser, V9kuMatch, V9kuMessage, V9kuVote, Op, initDB, sequelize } from './v9ku.db.js';
 import {
   scoreButtonsBuilder,
@@ -8,6 +7,8 @@ import {
   extractMessageContext,
   buildCommands,
   isMessageNotModified,
+  buildRatingList,
+  buildScoreReport,
 } from './v9ku.service.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
 import SceneBuilder from './v9ku.scenes.js';
@@ -218,23 +219,12 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
 
     // Счет
     bot.command('rating', async (ctx) => {
-      const formattedUsers = (
-        await V9kuUser.findAll({
-          where: { name: { [Op.ne]: null }, enabled: true },
-          order: [['score', 'DESC']],
-          limit: 50,
-        })
-      ).map((user, idx) => [
-        idx + 1,
-        user.score,
-        user.perfect,
-        (idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '') + user.name.substr(0, 11),
-      ]);
-      const table = markdownTable([['Место', 'Счет', 'Гол', 'Имя'], ...formattedUsers], {
-        delimiterStart: false,
-        delimiterEnd: false,
+      const users = await V9kuUser.findAll({
+        where: { name: { [Op.ne]: null }, enabled: true },
+        order: [['score', 'DESC']],
+        limit: 50,
       });
-      ctx.replyWithMarkdownV2(`*Турнирная таблица*\n\n\`\`\`\n${table}\n\`\`\``);
+      ctx.replyWithMarkdownV2(buildRatingList(users));
     });
 
     bot.command('score', async (ctx) => {
@@ -251,16 +241,7 @@ P\\.S\\. По всем вопросам пиши ${v9kuConfig.contact}`),
             order: [['score', 'DESC']],
           })
         ).findIndex((item) => item.userId == ctx.from.id) + 1;
-      const votesCount = await V9kuVote.count({ where: { userId: ctx.from.id } });
-      const table = markdownTable([
-        ['Ваши результаты'],
-        ['Общий счет', user.score],
-        //['Всего прогнозов', votesCount],
-        ['Точных прогнозов', user.perfect],
-        ['Место в рейтинге', place],
-        //['Дата регистрации', user.createdAt.toLocaleDateString('ru-RU')],
-      ]);
-      ctx.replyWithMarkdownV2(`\`\`\`\n${table}\n\`\`\``);
+      ctx.replyWithMarkdownV2(buildScoreReport(user, place));
     });
 
     // Тестовый
