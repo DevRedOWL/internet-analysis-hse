@@ -133,7 +133,7 @@ export function buildRatingList(users) {
   const lines = users.map((user, idx) => {
     const place = idx + 1;
     const name = md(user.name);
-    const stats = `${user.score} очк\\. · ${user.perfect} точных`;
+    const stats = `${md(String(user.score))} очк\\. · ${md(String(user.perfect))} точных`;
 
     if (place === 1) {
       return `🥇 *${name}* — ${stats}`;
@@ -153,9 +153,9 @@ export function buildRatingList(users) {
 export function buildScoreReport(user, place) {
   return `*Ваши результаты*
 
-Общий счёт: *${user.score}*
-Точных прогнозов: *${user.perfect}*
-Место в рейтинге: *${place}*`;
+*Общий счёт:* ${md(String(user.score))}
+*Точных прогнозов:* ${md(String(user.perfect))}
+*Место в рейтинге:* ${md(String(place))}`;
 }
 
 const removeMessageButtons = async (telegram, chatId, messageId) => {
