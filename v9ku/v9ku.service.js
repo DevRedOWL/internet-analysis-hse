@@ -112,6 +112,19 @@ export function buildRenameUsersTable(users) {
   });
 }
 
+export function buildBumpUsersTable(users) {
+  const rows = users.map((user) => [
+    String(user.id),
+    user.name?.trim() || '—',
+    String(user.score),
+    String(user.userId),
+  ]);
+
+  return markdownTable([['ID', 'Имя', 'Очки', 'TG ID'], ...rows], {
+    align: ['r', 'l', 'r', 'r'],
+  });
+}
+
 export function buildRatingList(users) {
   if (!users.length) {
     return '*Турнирная таблица*\n\nПока никто не участвует';
@@ -378,6 +391,7 @@ const commands = {
     { command: 'remind', description: '[Админ] Напоминание о голосовании' },
     { command: 'votes', description: '[Админ] Прогнозы по матчу' },
     { command: 'rename', description: '[Админ] Переименовать участника' },
+    { command: 'bump', description: '[Админ] Добавить очки участнику' },
     { command: 'reset_commands', description: '[Админ] Сбросить кнопки' },
     { command: 'info', description: '[Админ] Техническая информация' },
   ],

@@ -49,6 +49,7 @@ export class V9kuClient {
     const remindScene = new SceneBuilder().RemindScene();
     const votesScene = new SceneBuilder().VotesScene();
     const renameScene = new SceneBuilder().RenameScene();
+    const bumpScene = new SceneBuilder().BumpScene();
     const stage = new Scenes.Stage([
       createEventScene,
       setScoreScene,
@@ -56,6 +57,7 @@ export class V9kuClient {
       remindScene,
       votesScene,
       renameScene,
+      bumpScene,
     ]);
     bot.use(stage.middleware());
     bot.command('create_match', async (ctx) => {
@@ -96,6 +98,13 @@ export class V9kuClient {
     bot.command('rename', async (ctx) => {
       if (admins.list.indexOf(ctx.from.id) !== -1) {
         ctx.scene.enter('rename');
+      } else {
+        ctx.reply(admins.error_message);
+      }
+    });
+    bot.command('bump', async (ctx) => {
+      if (admins.list.indexOf(ctx.from.id) !== -1) {
+        ctx.scene.enter('bump');
       } else {
         ctx.reply(admins.error_message);
       }

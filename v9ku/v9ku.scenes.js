@@ -6,6 +6,7 @@ import {
   sendMatchReminders,
   buildMatchVotesReport,
   buildRenameUsersTable,
+  buildBumpUsersTable,
 } from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
@@ -633,5 +634,103 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
     });
 
     return renameScene;
+  }
+
+  BumpScene() {
+    const bumpScene = new Scenes.BaseScene('bump');
+
+    const showUsersList = async (ctx) => {
+      const users = await V9kuUser.findAll({ order: [['id', 'ASC']] });
+      if (!users.length) {
+        await ctx.reply('Нет зарегистрированных пользователей');
+        return false;
+      }
+
+      const table = buildBumpUsersTable(users);
+      await ctx.reply(
+        `*Изменение очков участника*\n\n\`\`\`\n${table}\n\`\`\`\n\nВведите id из таблицы или нажмите «Назад»`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Назад', callback_data: 'EXIT_MENU' }]],
+          },
+        },
+      );
+      return true;
+    };
+
+    bumpScene.enter(async (ctx) => {
+      ctx.session.bump = { step: 'pick' };
+      const hasUsers = await showUsersList(ctx);
+      if (!hasUsers) {
+        return await ctx.scene.leave();
+      }
+    });
+
+    bumpScene.action('EXIT_MENU', async (ctx) => {
+      ctx.session.bump = null;
+      await ctx.reply('Вы вышли из изменения очков');
+      return await ctx.scene.leave();
+    });
+
+    bumpScene.on(message(), async (ctx) => {
+      const text = ctx.message.text.trim();
+
+      if (text === '/exit') {
+        ctx.session.bump = null;
+        await ctx.reply('Вы вышли из изменения очков');
+        return await ctx.scene.leave();
+      }
+
+      if (!ctx.session.bump || ctx.session.bump.step === 'pick') {
+        const userId = Number(text);
+        if (!Number.isInteger(userId) || userId <= 0) {
+          await ctx.reply('Введите id из таблицы (целое число) или нажмите «Назад»');
+          return;
+        }
+
+        const user = await V9kuUser.findOne({ where: { id: userId } });
+        if (!user) {
+          await ctx.reply('Участник с таким id не найден. Введите id из таблицы или нажмите «Назад»');
+          return;
+        }
+
+        const currentLabel = user.name?.trim() || user.phone || `TG ${user.userId}`;
+        ctx.session.bump = { step: 'amount', userId: user.id };
+        await ctx.reply(
+          `Участник: ${currentLabel}\nТекущие очки: ${user.score}\n\nВведите количество очков (например 2 или -2) или /exit`,
+        );
+        return;
+      }
+
+      const amount = Number(text);
+      if (!Number.isFinite(amount) || amount === 0) {
+        await ctx.reply('Введите ненулевое число (например 2 или -2) или /exit');
+        return;
+      }
+
+      const [affectedCount] = await V9kuUser.update(
+        { score: sequelize.literal(`score + ${amount}`) },
+        { where: { id: ctx.session.bump.userId } },
+      );
+
+      if (!affectedCount) {
+        await ctx.reply('Не удалось обновить очки');
+        ctx.session.bump = null;
+        return await ctx.scene.leave();
+      }
+
+      const user = await V9kuUser.findOne({ where: { id: ctx.session.bump.userId } });
+      const sign = amount > 0 ? '+' : '';
+      await ctx.reply(`Очки обновлены: ${sign}${amount}\nНовый счёт: ${user.score}`);
+      ctx.session.bump = null;
+      return await ctx.scene.leave();
+    });
+
+    bumpScene.leave((ctx) => {
+      ctx.session.bump = null;
+    });
+
+    return bumpScene;
   }
 }
