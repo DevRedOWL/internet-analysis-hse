@@ -383,6 +383,56 @@ export const countReward = (vote, score) => {
   }
 };
 
+const formatNamesRu = (names) => {
+  if (names.length === 1) {
+    return names[0];
+  }
+  if (names.length === 2) {
+    return `${names[0]} и ${names[1]}`;
+  }
+  return `${names.slice(0, -1).join(', ')} и ${names[names.length - 1]}`;
+};
+
+export const isPerfectGuess = (vote, score) => countReward(vote, score) === 4;
+
+export async function sendPerfectGuessAnnouncement(telegram, match, votes) {
+  const perfectUserIds = votes.filter((vote) => isPerfectGuess(vote, match.score)).map((vote) => vote.userId);
+
+  if (!perfectUserIds.length) {
+    return { sent: 0, skipped: true };
+  }
+
+  const perfectUsers = await V9kuUser.findAll({
+    where: { userId: perfectUserIds },
+    order: [['name', 'ASC']],
+  });
+  const names = perfectUsers.map((user) => user.name?.trim()).filter(Boolean);
+
+  if (!names.length) {
+    return { sent: 0, skipped: true };
+  }
+
+  const message = `Поздравляем ${formatNamesRu(names.map(md))} с угадыванием счета матча 💪🏆🥇`;
+  const users = await V9kuUser.findAll({ where: { enabled: true } });
+  let sent = 0;
+  let failed = 0;
+
+  for (const user of users) {
+    try {
+      await telegram.sendMessage(user.userId, message, { parse_mode: 'MarkdownV2' });
+      sent++;
+    } catch (ex) {
+      failed++;
+      console.log(
+        `[${new Date().toLocaleString('ru-RU')}] [V9ku] Failed to send perfect guess announcement to ${user.userId}`,
+        ex.message,
+      );
+    }
+  }
+
+  return { sent, failed, skipped: false, total: users.length };
+}
+
 const commands = {
   admin: [
     { command: 'create_match', description: '[Админ] Создать матч' },

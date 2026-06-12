@@ -4,6 +4,7 @@ import {
   countReward,
   matchCaptionBuilder,
   sendMatchReminders,
+  sendPerfectGuessAnnouncement,
   buildMatchVotesReport,
   buildRenameUsersTable,
   buildBumpUsersTable,
@@ -323,6 +324,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
               });
           }
           await t.commit();
+          await sendPerfectGuessAnnouncement(ctx.telegram, updatedEvent, votes);
         } catch (ex) {
           await ctx.reply(`Не удалось выдать награды за прогноз`);
           console.log(ex);
