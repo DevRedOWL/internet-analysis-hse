@@ -5,6 +5,12 @@ const { dialect, user, password, host, port, database } = db;
 const sequelize = new Sequelize(`${dialect}://${user}:${password}@${host}:${port}/${database}`, {
   logging: false,
   query: { raw: true },
+  pool: {
+    max: 10,
+    min: 0,
+    acquire: 60000,
+    idle: 10000,
+  },
 });
 
 class V9kuUser extends Model {}

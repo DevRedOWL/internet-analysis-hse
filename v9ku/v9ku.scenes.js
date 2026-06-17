@@ -134,6 +134,15 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         }
 
         try {
+          await t.commit();
+        } catch (ex) {
+          console.log(ex);
+          await t.rollback();
+          ctx.reply('Ошибка при сохранении матча');
+          return await ctx.scene.leave();
+        }
+
+        try {
           const users = await V9kuUser.findAll({ where: { enabled: true } });
 
           // Если осталось менее, чем 28 часов до матча
@@ -150,14 +159,11 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
                     inline_keyboard: [caption.buttons],
                   },
                 });
-                await V9kuMessage.create(
-                  {
-                    messageId: message.message_id,
-                    userId: user.userId,
-                    matchId: matchData.id,
-                  },
-                  { transaction: t },
-                );
+                await V9kuMessage.create({
+                  messageId: message.message_id,
+                  userId: user.userId,
+                  matchId: matchData.id,
+                });
               } catch (ex) {
                 console.log(ex);
                 await V9kuUser.update({ enabled: false }, { where: { userId: user.userId } });
@@ -165,11 +171,10 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
               }
             }
           }
-          await t.commit();
           ctx.session.createEvent = null;
         } catch (ex) {
           console.log(ex);
-          await t.rollback();
+          await V9kuMatch.destroy({ where: { id: matchData.id } });
           ctx.reply('Ошибка при рассылке, матч удален');
         }
 
@@ -336,6 +341,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         await ctx.reply(`Счет установлен: ${score[0]} – ${score[1]}`);
         return await ctx.scene.reenter();
       } else {
+        await t.rollback();
         ctx.reply(`Счет неверный`);
         return await ctx.scene.reenter();
       }
