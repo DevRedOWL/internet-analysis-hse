@@ -138,6 +138,12 @@ export function buildBumpPerfectNotification(newPerfect) {
   return `Вам засчитан точный прогноз\\.\nВсего точных: *${md(String(newPerfect))}*`;
 }
 
+export function buildRewardNotification(reward, team1, team2, score) {
+  return `Вы получили ${md(String(reward))} очков за матч ${md(team1)} \\- ${md(
+    team2,
+  )}\nСчет: ⚽ ${md(String(score[0]))} \\- ${md(String(score[1]))}`;
+}
+
 export function buildRatingList(users) {
   if (!users.length) {
     return '*Турнирная таблица*\n\nПока никто не участвует';

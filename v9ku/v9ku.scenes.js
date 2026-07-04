@@ -10,6 +10,7 @@ import {
   buildBumpUsersTable,
   buildBumpScoreNotification,
   buildBumpPerfectNotification,
+  buildRewardNotification,
 } from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
@@ -321,7 +322,12 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
             ctx.telegram
               .sendMessage(
                 vote.userId,
-                `Вы получили ${reward} очков за матч ${updatedEvent.team1} \\- ${updatedEvent.team2}\nСчет: ⚽ ${updatedEvent.score[0]} \\- ${updatedEvent.score[1]}`,
+                buildRewardNotification(
+                  reward,
+                  updatedEvent.team1,
+                  updatedEvent.team2,
+                  updatedEvent.score,
+                ),
                 {
                   parse_mode: 'MarkdownV2',
                 },
