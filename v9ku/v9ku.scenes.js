@@ -10,7 +10,7 @@ import {
   buildBumpUsersTable,
   buildBumpScoreNotification,
   buildBumpPerfectNotification,
-  buildRewardNotification,
+  sendRewardNotifications,
 } from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
@@ -319,24 +319,9 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
               },
               { where: { userId: vote.userId }, returning: true, transaction: t },
             );
-            ctx.telegram
-              .sendMessage(
-                vote.userId,
-                buildRewardNotification(
-                  reward,
-                  updatedEvent.team1,
-                  updatedEvent.team2,
-                  updatedEvent.score,
-                ),
-                {
-                  parse_mode: 'MarkdownV2',
-                },
-              )
-              .catch((ex) => {
-                console.log(`Unable to deliver message to ${vote.userId}`, ex);
-              });
           }
           await t.commit();
+          await sendRewardNotifications(ctx.telegram, updatedEvent, votes);
           await sendPerfectGuessAnnouncement(ctx.telegram, updatedEvent, votes);
         } catch (ex) {
           await ctx.reply(`Не удалось выдать награды за прогноз`);
@@ -493,6 +478,77 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
     remindScene.leave((ctx) => {});
 
     return remindScene;
+  }
+
+  ResendRewardsScene() {
+    const resendScene = new Scenes.BaseScene('resend_rewards');
+
+    resendScene.enter(async (ctx) => {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const matches = await V9kuMatch.findAll({
+        where: {
+          score: { [Op.ne]: null },
+          date: { [Op.gte]: since },
+        },
+        order: [['date', 'DESC']],
+      });
+
+      if (!matches.length) {
+        await ctx.reply('Нет завершённых матчей за последние сутки');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply('Выберите матч для переотправки уведомлений о начислении очков:', {
+        reply_markup: {
+          inline_keyboard: [
+            ...matches.map((match) => [
+              {
+                text: `${match.team1} - ${match.team2} ${match.score[0]}:${match.score[1]} (${match.date.toLocaleString(
+                  'ru-RU',
+                  timeFormatConfig,
+                )})`,
+                callback_data: `RESEND_REWARDS_${match.id}`,
+              },
+            ]),
+            [{ text: 'Вернуться в меню', callback_data: 'EXIT_MENU' }],
+          ],
+        },
+      });
+    });
+
+    resendScene.action('EXIT_MENU', async (ctx) => {
+      await ctx.reply('Вы вышли из режима переотправки уведомлений');
+      return await ctx.scene.leave();
+    });
+
+    resendScene.action(/^RESEND_REWARDS_(\d+)$/, async (ctx) => {
+      const matchId = Number(ctx.match[1]);
+      const matchData = await V9kuMatch.findOne({ where: { id: matchId } });
+
+      if (!matchData?.score) {
+        await ctx.reply('Матч не найден или счёт не установлен');
+        return await ctx.scene.leave();
+      }
+
+      const votes = await V9kuVote.findAll({ where: { matchId: matchData.id } });
+      if (!votes.length) {
+        await ctx.reply('По этому матчу нет прогнозов');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.answerCbQuery('Отправка...');
+      const { sent, failed } = await sendRewardNotifications(ctx.telegram, matchData, votes);
+
+      await ctx.reply(
+        `Уведомления по матчу ${matchData.team1} - ${matchData.team2} ${matchData.score[0]}:${matchData.score[1]} отправлены.\n` +
+          `Доставлено: ${sent}\nОшибок: ${failed}`,
+      );
+      return await ctx.scene.leave();
+    });
+
+    resendScene.leave((ctx) => {});
+
+    return resendScene;
   }
 
   VotesScene() {

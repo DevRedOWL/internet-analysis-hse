@@ -50,11 +50,13 @@ export class V9kuClient {
     const votesScene = new SceneBuilder().VotesScene();
     const renameScene = new SceneBuilder().RenameScene();
     const bumpScene = new SceneBuilder().BumpScene();
+    const resendRewardsScene = new SceneBuilder().ResendRewardsScene();
     const stage = new Scenes.Stage([
       createEventScene,
       setScoreScene,
       sendingScene,
       remindScene,
+      resendRewardsScene,
       votesScene,
       renameScene,
       bumpScene,
@@ -70,6 +72,13 @@ export class V9kuClient {
     bot.command('set_score', async (ctx) => {
       if (admins.list.indexOf(ctx.from.id) !== -1) {
         ctx.scene.enter('set_score');
+      } else {
+        ctx.reply(admins.error_message);
+      }
+    });
+    bot.command('resend_rewards', async (ctx) => {
+      if (admins.list.indexOf(ctx.from.id) !== -1) {
+        ctx.scene.enter('resend_rewards');
       } else {
         ctx.reply(admins.error_message);
       }

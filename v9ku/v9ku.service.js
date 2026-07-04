@@ -144,6 +144,29 @@ export function buildRewardNotification(reward, team1, team2, score) {
   )}\nСчет: ⚽ ${md(String(score[0]))} \\- ${md(String(score[1]))}`;
 }
 
+export async function sendRewardNotifications(telegram, match, votes) {
+  let sent = 0;
+  let failed = 0;
+
+  for (const vote of votes) {
+    const rawReward = countReward(vote, match.score);
+    const reward = rawReward * match.coef;
+    try {
+      await telegram.sendMessage(
+        vote.userId,
+        buildRewardNotification(reward, match.team1, match.team2, match.score),
+        { parse_mode: 'MarkdownV2' },
+      );
+      sent++;
+    } catch (ex) {
+      failed++;
+      console.log(`Unable to deliver reward notification to ${vote.userId}`, ex);
+    }
+  }
+
+  return { sent, failed };
+}
+
 export function buildRatingList(users) {
   if (!users.length) {
     return '*Турнирная таблица*\n\nПока никто не участвует';
@@ -456,6 +479,7 @@ const commands = {
   admin: [
     { command: 'create_match', description: '[Админ] Создать матч' },
     { command: 'set_score', description: '[Админ] Завершить матч' },
+    { command: 'resend_rewards', description: '[Админ] Переотправить уведомления' },
     { command: 'sending', description: '[Админ] Выполнить рассылку' },
     { command: 'remind', description: '[Админ] Напоминание о голосовании' },
     { command: 'votes', description: '[Админ] Прогнозы по матчу' },
