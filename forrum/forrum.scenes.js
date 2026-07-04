@@ -1,7 +1,7 @@
 import path from 'path';
 import { Scenes } from 'telegraf';
-import { ForrumProfile } from './forrum.db.js';
-import { ForrumProfileStatus, ForrumProfessionalStatus } from './forrum.enum.js';
+import { ForrumProfile, ForrumUser } from './forrum.db.js';
+import { ForrumProfileStatus, ForrumStep } from './forrum.enum.js';
 
 export default class SceneBuilder {
   ProfileScene() {
@@ -111,6 +111,12 @@ export default class SceneBuilder {
           text: ctx.session.profile.text,
           photo: ctx.session.profile.photo,
           status: ForrumProfileStatus.WAITING_FOR_REVIEW,
+        },
+        { where: { userId: ctx.from.id } },
+      );
+      await ForrumUser.update(
+        {
+          step: ForrumStep.VALIDATION,
         },
         { where: { userId: ctx.from.id } },
       );

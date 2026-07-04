@@ -54,9 +54,9 @@ ForrumProfile.init(
   { sequelize, modelName: 'forrum_profile' },
 );
 
-async function init(callback) {
+async function initDB(callback) {
   await sequelize.sync({ alter: true });
   return callback();
 }
 
-export { Op, sequelize, init, ForrumUser, ForrumProfile };
+export { Op, sequelize, initDB, ForrumUser, ForrumProfile };

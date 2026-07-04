@@ -6,17 +6,21 @@
   "license": "WTFPL",
   "type": "module",
   "scripts": {
+    "dev": "nodemon -e js",
     "start:watch": "nodemon -e js",
     "start": "node index.js",
     "db:drop": "./node_modules/.bin/sequelize db:drop",
     "db:recreate": "yarn db:drop && ./node_modules/.bin/sequelize db:create",
-    "up": "docker-compose down && docker-compose up --force-recreate --build -d",
-    "lint": "eslint ./"
+    "up": "docker-compose down && DOCKER_BUILDKIT=1 docker-compose up --build -d",
+    "lint": "eslint ./",
+    "healthcheck": "curl --fail http://localhost:3000/healthcheck || exit 1"
   },
   "dependencies": {
+    "@telegraf/entity": "^0.5.0",
     "@typescript-eslint/parser": "^5.46.0",
     "axios": "^1.2.0",
-    "canvas": "^2.10.2",
+    "bullmq": "^3.5.6",
+    "canvas": "^3.2.3",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
@@ -24,13 +28,15 @@
     "markdown-table": "^3.0.2",
     "node-schedule": "^2.1.0",
     "node-telegram-bot-api": "^0.60.0",
+    "path": "^0.12.7",
     "pg": "^8.8.0",
     "prettier": "^2.8.0",
-    "sequelize": "^6.25.8",
+    "sequelize": "^6.37.3",
     "table-renderer": "^0.1.30",
     "telegraf": "^4.11.2",
     "telegraf-postgres-session": "^1.0.5",
-    "typescript": "^4.9.4"
+    "twemoji": "^14.0.2",
+    "typescript": "^4.9.5"
   },
   "devDependencies": {
     "eslint": "^7.32.0",
@@ -39,6 +45,7 @@
     "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-jest": "^24.4.0",
     "eslint-plugin-prettier": "^3.4.0",
-    "sequelize-cli": "^6.4.1"
+    "nodemon": "3.1.3",
+    "sequelize-cli": "^6.6.2"
   }
 }

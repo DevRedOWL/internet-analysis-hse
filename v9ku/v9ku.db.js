@@ -1,10 +1,16 @@
-import { Sequelize, Model, DataTypes, Op } from 'sequelize';
+import { Sequelize, Model, DataTypes, Op, Transaction } from 'sequelize';
 import { db } from '../config.js';
 
 const { dialect, user, password, host, port, database } = db;
 const sequelize = new Sequelize(`${dialect}://${user}:${password}@${host}:${port}/${database}`, {
   logging: false,
   query: { raw: true },
+  pool: {
+    max: 10,
+    min: 0,
+    acquire: 60000,
+    idle: 10000,
+  },
 });
 
 class V9kuUser extends Model {}
@@ -109,10 +115,19 @@ V9kuVote.init(
   { sequelize, modelName: 'v9ku_vote' },
 );
 
-async function init(callback) {
+async function initDB(callback) {
+  await sequelize.authenticate();
   await sequelize.sync({ alter: true });
   await sequelize.query(
     'CREATE TABLE IF NOT EXISTS postgress_sessions(id varchar PRIMARY KEY, session varchar);',
+  );
+  await sequelize.query(
+    `ALTER TABLE v9ku_votes DROP CONSTRAINT IF EXISTS match_user_unique; 
+    ALTER TABLE v9ku_votes ADD CONSTRAINT match_user_unique UNIQUE ("matchId", "userId")`,
+  );
+  await sequelize.query(
+    `ALTER TABLE v9ku_matches DROP CONSTRAINT IF EXISTS teams_time_unique; 
+    ALTER TABLE v9ku_matches ADD CONSTRAINT teams_time_unique UNIQUE ("team1", "team2", "date")`,
   );
   // try {
   //   await V9kuMatch.create({
@@ -126,4 +141,4 @@ async function init(callback) {
   return callback();
 }
 
-export { Op, sequelize, init, V9kuUser, V9kuMatch, V9kuMessage, V9kuVote };
+export { Op, sequelize, initDB, V9kuUser, V9kuMatch, V9kuMessage, V9kuVote };

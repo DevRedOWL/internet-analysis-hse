@@ -1,7 +1,22 @@
 import { Scenes } from 'telegraf';
-import { timeFormatConfig, countReward, matchCaptionBuilder } from './v9ku.service.js';
+import {
+  timeFormatConfig,
+  countReward,
+  matchCaptionBuilder,
+  sendMatchReminders,
+  sendPerfectGuessAnnouncement,
+  buildMatchVotesReport,
+  buildRenameUsersTable,
+  buildBumpUsersTable,
+  buildBumpScoreNotification,
+  buildBumpPerfectNotification,
+  sendRewardNotifications,
+} from './v9ku.service.js';
 import { V9kuMatch, V9kuUser, V9kuMessage, V9kuVote, Op, sequelize } from './v9ku.db.js';
 import { v9kuEventScheduler } from './v9ku.eventScheduler.js';
+import { message } from 'telegraf/filters';
+import { v9kuConfig } from '../config.js';
+import { escapers } from '@telegraf/entity';
 
 export default class SceneBuilder {
   EventCreateScene() {
@@ -24,7 +39,7 @@ export default class SceneBuilder {
       }
 
       const event = ctx.session.createEvent;
-      ctx.reply('Редактирование мероприятия', {
+      ctx.reply('Редактирование мероприятия, для выхода введите /exit', {
         reply_markup: {
           inline_keyboard: [
             [
@@ -64,7 +79,8 @@ export default class SceneBuilder {
     eventScene.action(actionEnum.EDIT_DATE, async (ctx) => {
       ctx.session.createEvent.step = actionEnum.EDIT_DATE;
       await ctx.editMessageText(
-        'Отправьте дату матча в ответном сообщении в формате\nПример: 2022-09-19 16:30\n\nВремя устанавливается по мск.',
+        'Отправьте дату матча в ответном сообщении в формате\nПример: `2024-06-20 16:30`\n\nВремя устанавливается по мск\\.',
+        { parse_mode: 'MarkdownV2' },
       );
     });
     eventScene.action(actionEnum.EDIT_TEAM, async (ctx) => {
@@ -108,41 +124,59 @@ export default class SceneBuilder {
 Время: ${matchData.date.toLocaleString('ru-RU', timeFormatConfig)} мск.
 ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
 
-        // FIXME: Рассылка матча
+        try {
+          await ctx.editMessageText(`🏆 Матч сохранен!\n\n${caption}`);
+        } catch (ex) {
+          ctx.reply(
+            'Сработала система автоматического исправления дубликатов, вероятно, кнопка создания матча была нажата дважды',
+          );
+          await t.rollback();
+          return await ctx.scene.leave();
+        }
+
+        try {
+          await t.commit();
+        } catch (ex) {
+          console.log(ex);
+          await t.rollback();
+          ctx.reply('Ошибка при сохранении матча');
+          return await ctx.scene.leave();
+        }
+
         try {
           const users = await V9kuUser.findAll({ where: { enabled: true } });
 
           // Если осталось менее, чем 28 часов до матча
-          if (new Date() > new Date(matchData.date.getTime() - 28 * 60 * 60 * 1000)) {
+          if (
+            new Date() >
+            new Date(matchData.date.getTime() - v9kuConfig.calls.first * 60 * 60 * 1000)
+          ) {
             for (let user of users) {
               try {
                 const caption = matchCaptionBuilder(user.name, matchData);
                 const message = await ctx.telegram.sendMessage(user.userId, caption.text, {
+                  parse_mode: 'MarkdownV2',
                   reply_markup: {
                     inline_keyboard: [caption.buttons],
                   },
                 });
-                await V9kuMessage.create(
-                  {
-                    messageId: message.message_id,
-                    userId: user.userId,
-                    matchId: matchData.id,
-                  },
-                  { transaction: t },
-                );
+                await V9kuMessage.create({
+                  messageId: message.message_id,
+                  userId: user.userId,
+                  matchId: matchData.id,
+                });
               } catch (ex) {
+                console.log(ex);
                 await V9kuUser.update({ enabled: false }, { where: { userId: user.userId } });
                 console.log(`Blocked user ${user.userId}`);
               }
             }
           }
-          await t.commit();
-          await ctx.editMessageText(`🏆 Матч сохранен!\n\n${caption}`);
           ctx.session.createEvent = null;
         } catch (ex) {
-          await t.rollback();
-          ctx.reply('Ошибка при рассылке');
           console.log(ex);
+          await V9kuMatch.destroy({ where: { id: matchData.id } });
+          ctx.reply('Ошибка при рассылке, матч удален');
         }
 
         return await ctx.scene.leave();
@@ -151,7 +185,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       }
     });
 
-    eventScene.on('text', async (ctx) => {
+    eventScene.on(message(), async (ctx) => {
       const url = ctx.message.text;
       if (url === '/exit') {
         ctx.reply('Вы вышли из режима создания мероприятия');
@@ -206,7 +240,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       }
     });
 
-    eventScene.leave((ctx) => {});
+    eventScene.leave(async (ctx) => {});
 
     return eventScene;
   }
@@ -220,7 +254,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         order: [['date', 'ASC']],
       });
       if (!matchData) {
-        await ctx.reply('Больше не осталось матчей без счета, для выхода введите /exit');
+        await ctx.reply('Больше не осталось матчей без счета');
         ctx.session.currentEvent = undefined;
         return await ctx.scene.leave();
       }
@@ -248,7 +282,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       return await ctx.scene.leave();
     });
 
-    scoreScene.on('text', async (ctx) => {
+    scoreScene.on(message(), async (ctx) => {
       const url = ctx.message.text.trim();
       if (ctx.session.currentEvent === undefined || url === '/exit') {
         ctx.reply('Вы вышли из режима ввода очков');
@@ -285,16 +319,10 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
               },
               { where: { userId: vote.userId }, returning: true, transaction: t },
             );
-            ctx.telegram
-              .sendMessage(
-                vote.userId,
-                `Вы получили ${reward} очков за матч ${updatedEvent.team1} - ${updatedEvent.team2}\nСчет: ⚽ ${updatedEvent.score[0]} - ${updatedEvent.score[1]}`,
-              )
-              .catch((ex) => {
-                console.log(`Unable to deliver message to ${vote.userId}`, ex);
-              });
           }
           await t.commit();
+          await sendRewardNotifications(ctx.telegram, updatedEvent, votes);
+          await sendPerfectGuessAnnouncement(ctx.telegram, updatedEvent, votes);
         } catch (ex) {
           await ctx.reply(`Не удалось выдать награды за прогноз`);
           console.log(ex);
@@ -304,6 +332,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
         await ctx.reply(`Счет установлен: ${score[0]} – ${score[1]}`);
         return await ctx.scene.reenter();
       } else {
+        await t.rollback();
         ctx.reply(`Счет неверный`);
         return await ctx.scene.reenter();
       }
@@ -337,7 +366,7 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
       return await ctx.scene.leave();
     });
 
-    sendngScene.on('text', async (ctx) => {
+    sendngScene.on(message(), async (ctx) => {
       const msg = ctx.message.text;
       if (msg === '/exit') {
         ctx.reply('Вы вышли из режима рассылки');
@@ -346,16 +375,23 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
 
       try {
         const users = await V9kuUser.findAll({ where: { enabled: true } });
+        const formattedMsg = escapers.MarkdownV2(msg);
         for (let user of users) {
           try {
-            await ctx.telegram.sendMessage(user.userId, '⚡ Рассылка от администратора\n\n' + msg);
+            await ctx.telegram.sendMessage(
+              user.userId,
+              '> ⚡ Рассылка от администратора\n\n\n' + formattedMsg,
+              {
+                parse_mode: 'MarkdownV2',
+              },
+            );
           } catch (ex) {
             await V9kuUser.update({ enabled: false }, { where: { userId: user.userId } });
             console.log(`Blocked user ${user.userId}`);
           }
         }
-        ctx.replyWithMarkdown(
-          `*Сообщение успешно отправлено ${users.length} пользователям:*\n\n${msg}`,
+        ctx.replyWithMarkdownV2(
+          `*Сообщение успешно отправлено ${users.length} пользователям: *\n\n${formattedMsg}`,
         );
       } catch (ex) {
         ctx.reply('Ошибка при рассылке');
@@ -367,5 +403,438 @@ ${matchData.url ? 'Ссылка: ' + matchData.url : ''}`;
     sendngScene.leave((ctx) => {});
 
     return sendngScene;
+  }
+
+  RemindScene() {
+    const remindScene = new Scenes.BaseScene('remind');
+
+    remindScene.enter(async (ctx) => {
+      const matches = await V9kuMatch.findAll({
+        where: {
+          score: null,
+          date: {
+            [Op.gt]: new Date(Date.now() - v9kuConfig.calls.last * 60 * 60 * 1000),
+          },
+        },
+        order: [['date', 'ASC']],
+      });
+
+      if (!matches.length) {
+        await ctx.reply('Нет активных матчей для напоминания');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply('Выберите матч для рассылки напоминаний:', {
+        reply_markup: {
+          inline_keyboard: [
+            ...matches.map((match) => [
+              {
+                text: `${match.team1} - ${match.team2} (${match.date.toLocaleString(
+                  'ru-RU',
+                  timeFormatConfig,
+                )})`,
+                callback_data: `REMIND_${match.id}`,
+              },
+            ]),
+            [{ text: 'Вернуться в меню', callback_data: 'EXIT_MENU' }],
+          ],
+        },
+      });
+    });
+
+    remindScene.action('EXIT_MENU', async (ctx) => {
+      await ctx.reply('Вы вышли из режима напоминаний');
+      return await ctx.scene.leave();
+    });
+
+    remindScene.action(/^REMIND_(\d+)$/, async (ctx) => {
+      const matchId = Number(ctx.match[1]);
+      const matchData = await V9kuMatch.findOne({ where: { id: matchId } });
+
+      if (!matchData) {
+        await ctx.reply('Матч не найден');
+        return await ctx.scene.leave();
+      }
+
+      if (
+        new Date() > new Date(matchData.date.getTime() - v9kuConfig.calls.last * 60 * 60 * 1000)
+      ) {
+        await ctx.reply('Время голосования за этот матч уже вышло');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.answerCbQuery('Рассылка запущена...');
+      const { sent, skipped, failed } = await sendMatchReminders(ctx.telegram, matchData, {
+        asNew: true,
+      });
+
+      await ctx.reply(
+        `Напоминания по матчу ${matchData.team1} - ${matchData.team2} отправлены.\n` +
+          `Отправлено: ${sent}\nПропущено (уже проголосовали): ${skipped}\nОшибок: ${failed}`,
+      );
+      return await ctx.scene.leave();
+    });
+
+    remindScene.leave((ctx) => {});
+
+    return remindScene;
+  }
+
+  ResendRewardsScene() {
+    const resendScene = new Scenes.BaseScene('resend_rewards');
+
+    resendScene.enter(async (ctx) => {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const matches = await V9kuMatch.findAll({
+        where: {
+          score: { [Op.ne]: null },
+          date: { [Op.gte]: since },
+        },
+        order: [['date', 'DESC']],
+      });
+
+      if (!matches.length) {
+        await ctx.reply('Нет завершённых матчей за последние сутки');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply('Выберите матч для переотправки уведомлений о начислении очков:', {
+        reply_markup: {
+          inline_keyboard: [
+            ...matches.map((match) => [
+              {
+                text: `${match.team1} - ${match.team2} ${match.score[0]}:${match.score[1]} (${match.date.toLocaleString(
+                  'ru-RU',
+                  timeFormatConfig,
+                )})`,
+                callback_data: `RESEND_REWARDS_${match.id}`,
+              },
+            ]),
+            [{ text: 'Вернуться в меню', callback_data: 'EXIT_MENU' }],
+          ],
+        },
+      });
+    });
+
+    resendScene.action('EXIT_MENU', async (ctx) => {
+      await ctx.reply('Вы вышли из режима переотправки уведомлений');
+      return await ctx.scene.leave();
+    });
+
+    resendScene.action(/^RESEND_REWARDS_(\d+)$/, async (ctx) => {
+      const matchId = Number(ctx.match[1]);
+      const matchData = await V9kuMatch.findOne({ where: { id: matchId } });
+
+      if (!matchData?.score) {
+        await ctx.reply('Матч не найден или счёт не установлен');
+        return await ctx.scene.leave();
+      }
+
+      const votes = await V9kuVote.findAll({ where: { matchId: matchData.id } });
+      if (!votes.length) {
+        await ctx.reply('По этому матчу нет прогнозов');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.answerCbQuery('Отправка...');
+      const { sent, failed } = await sendRewardNotifications(ctx.telegram, matchData, votes);
+
+      await ctx.reply(
+        `Уведомления по матчу ${matchData.team1} - ${matchData.team2} ${matchData.score[0]}:${matchData.score[1]} отправлены.\n` +
+          `Доставлено: ${sent}\nОшибок: ${failed}`,
+      );
+      return await ctx.scene.leave();
+    });
+
+    resendScene.leave((ctx) => {});
+
+    return resendScene;
+  }
+
+  VotesScene() {
+    const votesScene = new Scenes.BaseScene('votes');
+
+    votesScene.enter(async (ctx) => {
+      const matches = await V9kuMatch.findAll({
+        where: {
+          score: null,
+          date: {
+            [Op.gt]: new Date(Date.now() - v9kuConfig.calls.last * 60 * 60 * 1000),
+          },
+        },
+        order: [['date', 'ASC']],
+      });
+
+      if (!matches.length) {
+        await ctx.reply('Нет матчей для просмотра прогнозов');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply('Выберите матч для просмотра прогнозов:', {
+        reply_markup: {
+          inline_keyboard: [
+            ...matches.map((match) => [
+              {
+                text: `${match.team1} - ${match.team2} (${match.date.toLocaleString(
+                  'ru-RU',
+                  timeFormatConfig,
+                )})`,
+                callback_data: `VOTES_${match.id}`,
+              },
+            ]),
+            [{ text: 'Вернуться в меню', callback_data: 'EXIT_MENU' }],
+          ],
+        },
+      });
+    });
+
+    votesScene.action('EXIT_MENU', async (ctx) => {
+      await ctx.reply('Вы вышли из просмотра прогнозов');
+      return await ctx.scene.leave();
+    });
+
+    votesScene.action(/^VOTES_(\d+)$/, async (ctx) => {
+      const matchId = Number(ctx.match[1]);
+      const matchData = await V9kuMatch.findOne({ where: { id: matchId } });
+
+      if (!matchData) {
+        await ctx.reply('Матч не найден');
+        return await ctx.scene.leave();
+      }
+
+      await ctx.answerCbQuery();
+      const report = await buildMatchVotesReport(matchData);
+      await ctx.replyWithMarkdownV2(report);
+      return await ctx.scene.leave();
+    });
+
+    votesScene.leave((ctx) => {});
+
+    return votesScene;
+  }
+
+  RenameScene() {
+    const renameScene = new Scenes.BaseScene('rename');
+
+    const showUsersList = async (ctx) => {
+      const users = await V9kuUser.findAll({ order: [['id', 'ASC']] });
+      if (!users.length) {
+        await ctx.reply('Нет зарегистрированных пользователей');
+        return false;
+      }
+
+      const table = buildRenameUsersTable(users);
+      await ctx.reply(
+        `*Переименование участника*\n\n\`\`\`\n${table}\n\`\`\`\n\nВведите id из таблицы или нажмите «Назад»`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Назад', callback_data: 'EXIT_MENU' }]],
+          },
+        },
+      );
+      return true;
+    };
+
+    renameScene.enter(async (ctx) => {
+      ctx.session.rename = { step: 'pick' };
+      const hasUsers = await showUsersList(ctx);
+      if (!hasUsers) {
+        return await ctx.scene.leave();
+      }
+    });
+
+    renameScene.action('EXIT_MENU', async (ctx) => {
+      ctx.session.rename = null;
+      await ctx.reply('Вы вышли из переименования');
+      return await ctx.scene.leave();
+    });
+
+    renameScene.on(message(), async (ctx) => {
+      const text = ctx.message.text.trim();
+
+      if (text === '/exit') {
+        ctx.session.rename = null;
+        await ctx.reply('Вы вышли из переименования');
+        return await ctx.scene.leave();
+      }
+
+      if (!ctx.session.rename || ctx.session.rename.step === 'pick') {
+        const userId = Number(text);
+        if (!Number.isInteger(userId) || userId <= 0) {
+          await ctx.reply('Введите id из таблицы (целое число) или нажмите «Назад»');
+          return;
+        }
+
+        const user = await V9kuUser.findOne({ where: { id: userId } });
+        if (!user) {
+          await ctx.reply('Участник с таким id не найден. Введите id из таблицы или нажмите «Назад»');
+          return;
+        }
+
+        const currentLabel = user.name?.trim() || user.phone || `TG ${user.userId}`;
+        ctx.session.rename = { step: 'name', userId: user.id };
+        await ctx.reply(
+          `Участник: ${currentLabel}\nТекущее имя: ${user.name?.trim() || 'не задано'}\n\nВведите новое имя или /exit`,
+        );
+        return;
+      }
+
+      if (!text) {
+        await ctx.reply('Имя не может быть пустым. Введите новое имя или /exit');
+        return;
+      }
+
+      const [affectedCount] = await V9kuUser.update(
+        { name: text },
+        { where: { id: ctx.session.rename.userId } },
+      );
+
+      if (!affectedCount) {
+        await ctx.reply('Не удалось обновить имя');
+        ctx.session.rename = null;
+        return await ctx.scene.leave();
+      }
+
+      await ctx.reply(`Имя обновлено: ${text}`);
+      ctx.session.rename = null;
+      return await ctx.scene.leave();
+    });
+
+    renameScene.leave((ctx) => {
+      ctx.session.rename = null;
+    });
+
+    return renameScene;
+  }
+
+  BumpScene() {
+    const bumpScene = new Scenes.BaseScene('bump');
+
+    const showUsersList = async (ctx) => {
+      const users = await V9kuUser.findAll({ order: [['id', 'ASC']] });
+      if (!users.length) {
+        await ctx.reply('Нет зарегистрированных пользователей');
+        return false;
+      }
+
+      const table = buildBumpUsersTable(users);
+      await ctx.reply(
+        `*Изменение очков участника*\n\n\`\`\`\n${table}\n\`\`\`\n\nВведите id из таблицы или нажмите «Назад»`,
+        {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Назад', callback_data: 'EXIT_MENU' }]],
+          },
+        },
+      );
+      return true;
+    };
+
+    bumpScene.enter(async (ctx) => {
+      ctx.session.bump = { step: 'pick' };
+      const hasUsers = await showUsersList(ctx);
+      if (!hasUsers) {
+        return await ctx.scene.leave();
+      }
+    });
+
+    bumpScene.action('EXIT_MENU', async (ctx) => {
+      ctx.session.bump = null;
+      await ctx.reply('Вы вышли из изменения очков');
+      return await ctx.scene.leave();
+    });
+
+    bumpScene.on(message(), async (ctx) => {
+      const text = ctx.message.text.trim();
+
+      if (text === '/exit') {
+        ctx.session.bump = null;
+        await ctx.reply('Вы вышли из изменения очков');
+        return await ctx.scene.leave();
+      }
+
+      if (!ctx.session.bump || ctx.session.bump.step === 'pick') {
+        const userId = Number(text);
+        if (!Number.isInteger(userId) || userId <= 0) {
+          await ctx.reply('Введите id из таблицы (целое число) или нажмите «Назад»');
+          return;
+        }
+
+        const user = await V9kuUser.findOne({ where: { id: userId } });
+        if (!user) {
+          await ctx.reply('Участник с таким id не найден. Введите id из таблицы или нажмите «Назад»');
+          return;
+        }
+
+        const currentLabel = user.name?.trim() || user.phone || `TG ${user.userId}`;
+        ctx.session.bump = { step: 'amount', userId: user.id };
+        await ctx.reply(
+          `Участник: ${currentLabel}\nТекущие очки: ${user.score}, точных: ${user.perfect}\n\nВведите очки (2, -2), «гол» для +1 точного или /exit`,
+        );
+        return;
+      }
+
+      if (text.toLowerCase() === 'гол') {
+        const [affectedCount] = await V9kuUser.update(
+          { perfect: sequelize.literal('perfect + 1') },
+          { where: { id: ctx.session.bump.userId } },
+        );
+
+        if (!affectedCount) {
+          await ctx.reply('Не удалось обновить точные прогнозы');
+          ctx.session.bump = null;
+          return await ctx.scene.leave();
+        }
+
+        const user = await V9kuUser.findOne({ where: { id: ctx.session.bump.userId } });
+        ctx.telegram
+          .sendMessage(user.userId, buildBumpPerfectNotification(user.perfect), {
+            parse_mode: 'MarkdownV2',
+          })
+          .catch((ex) => {
+            console.log(`Unable to deliver bump notification to ${user.userId}`, ex);
+          });
+        await ctx.reply(`Добавлено точное угадание (+1)\nВсего точных: ${user.perfect}`);
+        ctx.session.bump = null;
+        return await ctx.scene.leave();
+      }
+
+      const amount = Number(text);
+      if (!Number.isFinite(amount) || amount === 0) {
+        await ctx.reply('Введите ненулевое число (2, -2), «гол» или /exit');
+        return;
+      }
+
+      const [affectedCount] = await V9kuUser.update(
+        { score: sequelize.literal(`score + ${amount}`) },
+        { where: { id: ctx.session.bump.userId } },
+      );
+
+      if (!affectedCount) {
+        await ctx.reply('Не удалось обновить очки');
+        ctx.session.bump = null;
+        return await ctx.scene.leave();
+      }
+
+      const user = await V9kuUser.findOne({ where: { id: ctx.session.bump.userId } });
+      ctx.telegram
+        .sendMessage(user.userId, buildBumpScoreNotification(amount, user.score), {
+          parse_mode: 'MarkdownV2',
+        })
+        .catch((ex) => {
+          console.log(`Unable to deliver bump notification to ${user.userId}`, ex);
+        });
+      const sign = amount > 0 ? '+' : '';
+      await ctx.reply(`Очки обновлены: ${sign}${amount}\nНовый счёт: ${user.score}`);
+      ctx.session.bump = null;
+      return await ctx.scene.leave();
+    });
+
+    bumpScene.leave((ctx) => {
+      ctx.session.bump = null;
+    });
+
+    return bumpScene;
   }
 }

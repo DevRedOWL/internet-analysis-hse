@@ -1,6 +1,12 @@
 import { config } from 'dotenv';
 config();
 
+export const app = {
+  env: process.env.APP_ENV || 'development',
+  port: process.env.APP_PORT || 3000,
+  startup: new Date(),
+};
+
 export const admins = {
   list: [236413395, 146023566], // Я, Дима
   error_message: 'У вас недостаточно прав для совершения данного действия',
@@ -11,12 +17,27 @@ export const db = {
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || 'telegram-app-db',
   port: process.env.DB_PORT || '5432',
+};
+
+export const redis = {
+  host: process.env.REDIS_HOST || 'telegram-app-redis',
+  port: process.env.REDIS_PORT || 6379,
 };
 
 export const credentials = {
   v9ku_token: process.env.TELEGRAM_API_KEY_V9KU,
   forrum_token: process.env.TELEGRAM_API_KEY_FORRUM,
   forrum_admin_token: process.env.TELEGRAM_API_KEY_FORRUM,
+};
+
+export const v9kuConfig = {
+  contact: "@DimaTomchuk",
+  calls: {
+    first: 28,
+    second: 6,
+    third: 3,
+    last: 1,
+  },
 };

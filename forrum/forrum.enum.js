@@ -5,6 +5,11 @@ export const ForrumStep = {
   CONFIRM_PRICES: 4,
   VIEW_MEMBERS: 5,
   PROFILE: 6,
+  VALIDATION: 7,
+};
+
+export const ForrumQueueJobName = {
+  NOTIFICATION: 'notification',
 };
 
 export const ForrumProfessionalStatus = {
